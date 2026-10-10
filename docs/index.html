@@ -1,0 +1,1832 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mijn Voeding</title>
+<meta name="description" content="Persoonlijke voedingsapp met eigen puntensysteem.">
+<meta name="theme-color" content="#F3F5F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111713" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Voeding">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}</style>
+<style>
+/* Layout: één kolom zoals een telefoon-app (max 560px), plakkende datumbalk, vaste tabbalk onderaan; de puntenstand eerst, maaltijden als rustige lijsten. */
+:root {
+  --bg: #F3F5F0;
+  --surface: #FFFFFF;
+  --surface-2: #EAEEE6;
+  --ink: #1C2921;
+  --muted: #5B675F;
+  --line: #DCE2D6;
+  --fig: #7A3D6C;
+  --fig-ink: #FFFFFF;
+  --fig-soft: #F3E7F0;
+  --leaf: #357040;
+  --leaf-soft: #E0EEDD;
+  --amber: #93600F;
+  --amber-soft: #F8EDD7;
+  --danger: #A23A2C;
+  --scrim: rgba(20, 28, 23, .42);
+  --shadow: 0 1px 2px rgba(28, 41, 33, .06), 0 6px 20px rgba(28, 41, 33, .07);
+  --font-display: "Bricolage Grotesque", ui-rounded, "SF Pro Rounded", system-ui, -apple-system, sans-serif;
+  --font-body: Figtree, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+  --tab-h: 62px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111713; --surface: #19211C; --surface-2: #222C25; --ink: #E6ECE5; --muted: #9CA8A0; --line: #2D3830;
+    --fig: #D592C4; --fig-ink: #24101F; --fig-soft: #3A2435; --leaf: #8BC890; --leaf-soft: #1E3322;
+    --amber: #E4B05C; --amber-soft: #3A2D15; --danger: #F08E7E; --scrim: rgba(0, 0, 0, .6);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111713; --surface: #19211C; --surface-2: #222C25; --ink: #E6ECE5; --muted: #9CA8A0; --line: #2D3830;
+  --fig: #D592C4; --fig-ink: #24101F; --fig-soft: #3A2435; --leaf: #8BC890; --leaf-soft: #1E3322;
+  --amber: #E4B05C; --amber-soft: #3A2D15; --danger: #F08E7E; --scrim: rgba(0, 0, 0, .6);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body);
+  font-size: 16px; line-height: 1.45; margin: 0; -webkit-tap-highlight-color: transparent;
+}
+body.noscroll { overflow: hidden; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+h1, h2, h3, h4 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+.tnum { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+:focus-visible { outline: 3px solid var(--fig); outline-offset: 2px; border-radius: 8px; }
+svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+#app { max-width: 560px; margin: 0 auto; padding-inline: 16px; padding-block: 0 calc(var(--tab-h) + env(safe-area-inset-bottom, 0px) + 28px); }
+#view { display: flex; flex-direction: column; gap: 16px; }
+
+/* Bovenbalk */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); margin-inline: -16px; padding: 10px 16px 12px; }
+.tb { display: flex; align-items: center; gap: 8px; min-height: 56px; }
+.tb-mid { flex: 1; min-width: 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.tb-left { text-align: left; align-items: flex-start; }
+.tb-title { font-family: var(--font-display); font-weight: 700; font-size: 1.45rem; letter-spacing: -.01em; line-height: 1.15; }
+.tb-mid .tb-title::first-letter { text-transform: uppercase; }
+.eyebrow { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; min-height: 1.2em; }
+.eyebrow-link { background: none; border: 0; padding: 0; color: var(--fig); text-transform: uppercase; letter-spacing: .08em; }
+
+/* Knoppen */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 18px; border-radius: var(--r-sm); border: 1px solid transparent; font-weight: 600; font-size: 1rem; text-decoration: none; transition: transform .1s ease, background .15s ease; }
+.btn:active { transform: scale(.98); }
+.btn[disabled] { opacity: .45; pointer-events: none; }
+.btn-lg { min-height: 56px; font-size: 1.05rem; border-radius: var(--r-md); }
+.btn-sm { min-height: 40px; padding: 0 14px; font-size: .95rem; }
+.btn-block { width: 100%; }
+.btn-primary { background: var(--fig); color: var(--fig-ink); }
+.btn-soft { background: var(--surface-2); color: var(--ink); }
+.btn-ghost { background: transparent; color: var(--fig); }
+.btn-danger { background: var(--danger); color: var(--surface); }
+.btn svg { width: 20px; height: 20px; }
+.btn.is-fav svg { fill: currentColor; }
+.icon-btn { width: 44px; height: 44px; display: inline-grid; place-items: center; border-radius: 50%; border: 0; background: transparent; color: var(--ink); flex: none; font-size: 1.4rem; line-height: 1; }
+.icon-btn-soft { background: var(--surface-2); }
+.link { background: none; border: 0; padding: 8px 0; color: var(--fig); font-weight: 600; text-align: left; align-self: flex-start; }
+.link-inline { padding: 0; display: inline; }
+
+/* Puntenstand */
+.sum { background: var(--surface); border-radius: var(--r-lg); padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; }
+.sum-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.big { font-family: var(--font-display); font-weight: 700; font-size: 3.6rem; line-height: .95; letter-spacing: -.03em; color: var(--ink); }
+.big.is-zero { color: var(--leaf); }
+.big.is-bonus { color: var(--leaf); }
+.mid { font-family: var(--font-display); font-weight: 600; font-size: 1.9rem; line-height: 1; letter-spacing: -.02em; text-align: right; }
+.big-label { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+.sum-week .big-label { text-align: right; }
+.bar { height: 12px; border-radius: 999px; background: var(--surface-2); overflow: hidden; display: block; }
+.bar > span { display: block; height: 100%; background: var(--fig); border-radius: inherit; transition: width .3s ease; }
+.bar-over > span { background: var(--amber); }
+.bar-sm { height: 8px; }
+.sum-line { font-size: .92rem; }
+
+.actions { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
+.btn-craving { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; align-items: center; text-align: left; width: 100%; padding: 14px 16px; border-radius: var(--r-md); border: 1.5px solid var(--fig); background: var(--fig-soft); color: var(--ink); min-height: 64px; }
+.btn-craving svg { grid-row: 1 / span 2; grid-column: 2; color: var(--fig); }
+.craving-t { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; color: var(--fig); }
+.craving-s { font-size: .92rem; color: var(--muted); }
+
+/* Meldingen */
+.notice { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.notice-warn { background: var(--amber-soft); border-color: transparent; }
+.notice p { font-size: .95rem; }
+
+/* Maaltijden */
+.meal { display: flex; flex-direction: column; gap: 4px; }
+.meal-head { display: flex; align-items: center; gap: 10px; padding-top: 4px; }
+.meal-head h2 { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; flex: 1; }
+.meal-pts { color: var(--muted); font-size: .92rem; font-weight: 600; }
+.list { background: var(--surface); border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); }
+.row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 14px; background: transparent; border: 0; border-bottom: 1px solid var(--line); text-align: left; }
+.list > .row:last-child { border-bottom: 0; }
+.row:active { background: var(--surface-2); }
+.row-static:active { background: transparent; }
+.row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.row-name { font-weight: 600; overflow-wrap: anywhere; }
+.row-sub { font-size: .85rem; color: var(--muted); overflow-wrap: anywhere; }
+.fav { color: var(--fig); font-size: .85em; }
+.pts { min-width: 40px; height: 32px; padding: 0 10px; border-radius: 999px; background: var(--surface-2); display: inline-grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 1rem; flex: none; }
+.pts-zero { background: var(--leaf-soft); color: var(--leaf); }
+.pts-bonus { background: var(--leaf-soft); color: var(--leaf); }
+.tag { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); vertical-align: middle; margin-left: 4px; }
+.tag-zero { background: var(--leaf-soft); color: var(--leaf); }
+.empty { color: var(--muted); padding: 14px 4px; font-size: .95rem; }
+.list-h { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; margin: 14px 4px 6px; }
+
+/* Voedingswaarden */
+.nutri { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 4px 16px; }
+.nutri summary { cursor: pointer; min-height: 48px; display: flex; align-items: center; font-weight: 600; list-style: none; }
+.nutri summary::-webkit-details-marker { display: none; }
+.nutri summary::after { content: "+"; margin-left: auto; font-family: var(--font-display); font-size: 1.3rem; color: var(--muted); }
+.nutri[open] summary::after { content: "−"; }
+.nutri[open] { padding-bottom: 14px; }
+.nutri-grid { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; margin: 4px 0 10px; }
+.nutri-kcal { display: flex; flex-direction: column; padding-right: 16px; border-right: 1px solid var(--line); }
+.nv-big { font-family: var(--font-display); font-weight: 700; font-size: 1.9rem; line-height: 1; }
+.nutri-macros { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.nutri-macros > div, .nutri-kcal { min-width: 0; }
+.nv { display: block; font-weight: 700; }
+.nl { display: block; font-size: .8rem; color: var(--muted); }
+.nutri-note { font-size: .88rem; margin-top: 6px; }
+
+/* Kaarten */
+.card { background: var(--surface); border-radius: var(--r-lg); padding: 18px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+.card-title { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.hint { font-size: .88rem; color: var(--muted); }
+.lead { font-size: 1rem; }
+.lr { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: .95rem; }
+.lr > span:last-child { text-align: right; font-weight: 600; }
+.lr-total { border-bottom: 0; font-weight: 700; font-size: 1.05rem; padding-top: 10px; }
+.lr-total > span:last-child { color: var(--fig); }
+.calc { background: var(--surface-2); border-radius: var(--r-sm); padding: 8px 14px; }
+.formula { font-family: var(--font-display); font-size: 1.05rem; background: var(--surface-2); border-radius: var(--r-sm); padding: 12px 14px; }
+.formula b { color: var(--fig); }
+
+.days { display: flex; flex-direction: column; gap: 2px; }
+.dayrow { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 12px; min-height: 44px; background: none; border: 0; padding: 0 4px; border-radius: 10px; text-align: left; }
+.dayrow:active { background: var(--surface-2); }
+.dayrow.is-today .dl { color: var(--fig); font-weight: 700; }
+.dl { font-weight: 600; }
+.dn { font-weight: 700; min-width: 64px; text-align: right; }
+.dn small { color: var(--muted); font-weight: 500; }
+
+/* Formulieren */
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field > span { font-size: .85rem; color: var(--muted); font-weight: 600; }
+input:not([type=checkbox]):not([type=file]), select, textarea {
+  width: 100%; min-height: 48px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); padding: 0 12px; font-size: 16px; color: var(--ink);
+}
+textarea { padding: 10px 12px; min-height: 96px; resize: vertical; }
+.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px !important; }
+.search { background: var(--surface) !important; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.fs { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.fs legend { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; padding: 0; margin-bottom: 8px; }
+.err { color: var(--danger); font-weight: 600; font-size: .92rem; }
+.err:empty { display: none; }
+
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 52px; }
+.switch-row small { display: block; color: var(--muted); font-size: .85rem; }
+.switch { appearance: none; -webkit-appearance: none; width: 52px; height: 32px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); position: relative; flex: none; transition: background .15s ease; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow); transition: transform .15s ease; }
+.switch:checked { background: var(--leaf); border-color: var(--leaf); }
+.switch:checked::after { transform: translateX(20px); }
+
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: var(--r-sm); }
+.seg button { min-height: 40px; border: 0; background: transparent; border-radius: 9px; font-weight: 600; font-size: .92rem; padding: 0 6px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips-scroll { flex-wrap: nowrap; overflow-x: auto; margin-inline: -16px; padding-inline: 16px; scrollbar-width: none; padding-bottom: 2px; }
+.chips-scroll::-webkit-scrollbar { display: none; }
+.chip { min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; font-size: .95rem; white-space: nowrap; flex: none; }
+.chip[aria-pressed="true"] { background: var(--fig); color: var(--fig-ink); border-color: var(--fig); }
+.chip-lg { display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 8px 16px; border-radius: var(--r-sm); min-height: 56px; white-space: normal; text-align: left; }
+.chip-lg small { font-weight: 500; font-size: .8rem; opacity: .8; }
+
+.qty { display: flex; align-items: center; gap: 12px; }
+.qty-v { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; min-width: 72px; text-align: center; }
+.qty-res { margin-left: auto; color: var(--muted); font-weight: 600; }
+
+.result { display: flex; align-items: center; gap: 18px; background: var(--surface-2); border-radius: var(--r-md); padding: 14px 16px; }
+.result-pts { display: flex; flex-direction: column; }
+.result-pts .big { font-size: 2.8rem; }
+.result-n { font-size: .9rem; color: var(--muted); }
+.result-n b { color: var(--ink); font-size: 1rem; }
+.row-actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; }
+
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.stack-h { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Panelen */
+.sheet-wrap { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; }
+.sheet-backdrop { position: absolute; inset: 0; background: var(--scrim); opacity: 0; transition: opacity .2s ease; }
+.sheet { position: relative; width: 100%; max-width: 560px; max-height: calc(100% - 28px - env(safe-area-inset-top, 0px)); background: var(--bg); border-radius: var(--r-lg) var(--r-lg) 0 0; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .22s cubic-bezier(.2, .8, .2, 1); outline: none; }
+.sheet-tall { height: calc(100% - 28px - env(safe-area-inset-top, 0px)); }
+.sheet-wrap.open .sheet { transform: none; }
+.sheet-wrap.open .sheet-backdrop { opacity: 1; }
+.sheet-head { padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--line); }
+.sheet-head::before { content: ""; width: 40px; height: 5px; border-radius: 999px; background: var(--line); align-self: center; margin-top: -4px; }
+.sh-row { display: flex; align-items: flex-start; gap: 10px; }
+.sh-titles { flex: 1; min-width: 0; }
+.sheet-head h2 { font-family: var(--font-display); font-weight: 700; font-size: 1.35rem; line-height: 1.2; }
+.sh-sub { color: var(--muted); font-size: .92rem; margin-top: 2px; }
+.sheet-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 14px 16px calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; }
+.lbl { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; margin-top: 4px; }
+
+.quick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.quick-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 14px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface); text-align: left; min-height: 64px; }
+.qb-t { font-weight: 700; }
+.qb-s { font-size: .85rem; color: var(--muted); }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button { flex: 1; min-height: 44px; border: 0; background: none; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; padding: 0 8px; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--fig); }
+
+.choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.choice { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 104px; border-radius: var(--r-md); border: 1.5px solid var(--line); background: var(--surface); padding: 10px 6px; text-align: center; }
+.choice:active { border-color: var(--fig); background: var(--fig-soft); }
+.choice-t { font-weight: 600; font-size: .95rem; }
+.choice-p { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; color: var(--fig); }
+
+.meals { display: flex; flex-direction: column; gap: 10px; }
+.mealcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.mc-top { display: flex; align-items: center; gap: 12px; }
+.mc-actions { display: flex; gap: 8px; }
+
+.cravings { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.crave { min-height: 56px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface); font-weight: 600; text-align: left; padding: 10px 14px; }
+.crave[aria-pressed="true"] { background: var(--fig); color: var(--fig-ink); border-color: var(--fig); }
+.ideas { display: flex; flex-direction: column; gap: 10px; }
+.idea { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.idea-top { display: flex; gap: 12px; align-items: flex-start; width: 100%; }
+.idea h4 { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; flex: 1; min-width: 0; }
+.idea p { font-size: .95rem; }
+
+.por-head, .por-row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, .8fr) minmax(0, 1fr) 40px 40px; gap: 6px; align-items: center; }
+.por-head span { font-size: .75rem; color: var(--muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.por-row .pts { min-width: 0; padding: 0 6px; }
+.por-row .icon-btn { width: 40px; height: 40px; }
+
+.act-types { display: flex; flex-direction: column; gap: 8px; }
+.act-type { display: grid; grid-template-columns: minmax(0, 1fr) 92px 78px 40px; gap: 6px; align-items: center; }
+.mini { display: flex; align-items: center; gap: 4px; font-size: .85rem; color: var(--muted); font-weight: 600; min-width: 0; }
+.mini input { padding: 0 8px !important; text-align: center; }
+.act-type .icon-btn { width: 40px; height: 40px; }
+.file-btn { position: relative; }
+
+/* Tabbalk */
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.tabbar-in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); height: var(--tab-h); }
+.tabbar button { border: 0; background: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: .75rem; font-weight: 600; color: var(--muted); }
+.tabbar button[aria-current="page"] { color: var(--fig); }
+.tabbar svg { width: 24px; height: 24px; }
+
+/* Toast */
+.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + env(safe-area-inset-bottom, 0px) + 14px); transform: translate(-50%, 16px); z-index: 80; background: var(--ink); color: var(--bg); border-radius: 999px; padding: 10px 10px 10px 18px; display: flex; align-items: center; gap: 10px; max-width: calc(100% - 32px); width: max-content; font-weight: 600; font-size: .95rem; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.toast:not(:has(button)) { padding-right: 18px; }
+.toast-btn { border: 0; background: var(--fig); color: var(--fig-ink); border-radius: 999px; min-height: 36px; padding: 0 14px; font-weight: 700; }
+
+@media (max-width: 380px) {
+  .big { font-size: 3rem; }
+  .actions { grid-template-columns: 1fr; }
+  .grid3 { grid-template-columns: 1fr 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar" id="topbar"></header>
+  <main id="view"><p class="empty">Laden…</p></main>
+  <nav class="tabbar" aria-label="Hoofdmenu">
+    <div class="tabbar-in">
+      <button type="button" data-tab="vandaag" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/></svg><span>Vandaag</span></button>
+      <button type="button" data-tab="week"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span>Week</span></button>
+      <button type="button" data-tab="producten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10M8.5 3.5V7C6.3 8 5 9.6 5 12v6a2.5 2.5 0 002.5 2.5h9A2.5 2.5 0 0019 18v-6c0-2.4-1.3-4-3.5-5V3.5"/><path d="M5 13.5h14"/></svg><span>Producten</span></button>
+      <button type="button" data-tab="instellingen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M18 7h2M4 17h3M11 17h9"/><circle cx="15.5" cy="7" r="2.3"/><circle cx="8.5" cy="17" r="2.3"/></svg><span>Instellingen</span></button>
+    </div>
+  </nav>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>window.APP_BUILD = "pwa";</script>
+<script>
+'use strict';
+// ===== Standaardproducten (merkloos) =====
+// Waarden per 100 g of 100 ml: [kcal, eiwit, koolhydraten, vet, vezels]. Gemiddelden, afgerond.
+// Porties: [omschrijving, gram, vaste punten | koffielepels (bij vetregel)]
+// Labels voor eetdrang: zoet hartig knap warm fris vult direct royaal
+const SEED_VERSION = 1;
+
+const CATS = ['Groenten', 'Fruit', 'Peulvruchten & tofu', 'Eieren', 'Vlees & gevogelte', 'Vis & zeevruchten',
+  'Zuivel', 'Kaas', 'Brood & crackers', 'Granen & aardappelen', 'Noten & zaden', 'Bereidingsvet',
+  'Sauzen & smeersels', 'Snacks & zoet', 'Dranken', 'Kant-en-klaar', 'Eigen producten'];
+
+const TAGS = [
+  ['zoet', 'Iets zoets'], ['hartig', 'Iets hartigs'], ['knap', 'Iets knapperigs'], ['warm', 'Iets warms'],
+  ['fris', 'Iets fris'], ['vult', 'Iets dat goed vult'], ['direct', 'Iets dat meteen klaar is'], ['royaal', 'Een royale portie']
+];
+
+const ML = { eenheid: 'ml' };
+const VET = { regel: 'vet' };
+
+const SEED = [
+  // Groenten (ZeroPoints)
+  ['tomaat', 'Tomaat', 'Groenten', 1, [18, 0.9, 3.9, 0.2, 1.2], [['stuk', 120], ['handje kerstomaatjes', 100]], 'fris direct hartig'],
+  ['komkommer', 'Komkommer', 'Groenten', 1, [12, 0.6, 2, 0.1, 0.7], [['halve', 150], ['hele', 300]], 'fris knap direct royaal'],
+  ['paprika', 'Paprika', 'Groenten', 1, [27, 1, 5, 0.3, 1.8], [['stuk', 150], ['halve', 75]], 'knap fris direct'],
+  ['wortel', 'Wortel', 'Groenten', 1, [35, 0.8, 7, 0.2, 2.8], [['stuk', 80], ['kom geraspt', 100]], 'knap fris direct royaal'],
+  ['radijs', 'Radijsjes', 'Groenten', 1, [16, 0.7, 2.5, 0.1, 1.6], [['handje', 80]], 'knap fris direct hartig'],
+  ['selder', 'Bleekselder', 'Groenten', 1, [14, 0.7, 2, 0.2, 1.6], [['stengel', 40]], 'knap fris direct'],
+  ['witloof', 'Witloof', 'Groenten', 1, [17, 1, 2.5, 0.1, 1.5], [['stuk', 100]], 'fris knap direct'],
+  ['sla', 'Sla', 'Groenten', 1, [15, 1.2, 1.5, 0.2, 1.3], [['kom', 50]], 'fris royaal'],
+  ['spinazie', 'Spinazie', 'Groenten', 1, [23, 2.9, 1.4, 0.4, 2.2], [['kom', 150]], 'warm'],
+  ['broccoli', 'Broccoli', 'Groenten', 1, [34, 2.8, 4, 0.4, 2.6], [['kom', 150]], 'warm vult'],
+  ['bloemkool', 'Bloemkool', 'Groenten', 1, [25, 1.9, 3, 0.3, 2], [['kom', 150]], 'warm'],
+  ['courgette', 'Courgette', 'Groenten', 1, [17, 1.2, 2.2, 0.3, 1], [['halve', 125], ['hele', 250]], 'warm'],
+  ['aubergine', 'Aubergine', 'Groenten', 1, [25, 1, 4, 0.2, 3], [['halve', 150], ['hele', 300]], 'warm'],
+  ['champignons', 'Champignons', 'Groenten', 1, [22, 3, 0.5, 0.3, 1.5], [['kom', 100], ['bakje', 250]], 'warm hartig'],
+  ['ui', 'Ui', 'Groenten', 1, [40, 1.1, 8, 0.1, 1.7], [['stuk', 100]], ''],
+  ['prei', 'Prei', 'Groenten', 1, [30, 1.5, 5, 0.3, 2.2], [['stengel', 150]], 'warm'],
+  ['boontjes', 'Groene boontjes', 'Groenten', 1, [31, 1.8, 4.5, 0.2, 3.4], [['kom', 150]], 'warm'],
+  ['spruitjes', 'Spruitjes', 'Groenten', 1, [43, 3.4, 5, 0.3, 3.8], [['kom', 150]], 'warm'],
+  ['wokgroenten', 'Wokgroenten', 'Groenten', 1, [30, 2, 4, 0.3, 2.5], [['kom', 200], ['zak', 400]], 'warm royaal'],
+  ['tomblik', 'Tomatenblokjes (blik)', 'Groenten', 1, [21, 1.1, 3.5, 0.2, 1], [['blik', 400], ['halve blik', 200]], ''],
+  ['passata', 'Passata (zuivere tomaat)', 'Groenten', 1, [35, 1.5, 6, 0.2, 1.5], [['kom', 150], ['fles', 500]], ''],
+  ['tompuree', 'Tomatenpuree', 'Groenten', 1, [82, 4.3, 14, 0.5, 4], [['eetlepel', 15]], ''],
+  ['augurk', 'Augurk', 'Groenten', 1, [12, 0.5, 2, 0.1, 1], [['stuk', 30]], 'hartig knap fris direct'],
+  ['groentesoep', 'Groentesoep (zelfgemaakt, zonder room)', 'Groenten', 1, [30, 1.3, 4, 0.5, 1.5], [['kom', 250]], 'warm hartig vult royaal'],
+  ['avocado', 'Avocado', 'Groenten', 0, [160, 2, 8.5, 14.7, 6.7], [['¼ avocado', 40, 2], ['½ avocado', 80, 4], ['1 hele avocado', 160, 8]], 'vult', { regel: 'vast', notitie: 'Vaste punten, ongeacht de grootte.' }],
+
+  // Fruit
+  ['banaan', 'Banaan', 'Fruit', 1, [89, 1.1, 20, 0.3, 2.6], [['stuk', 120]], 'zoet vult direct'],
+  ['appel', 'Appel', 'Fruit', 1, [52, 0.3, 12, 0.2, 2.4], [['stuk', 150]], 'zoet knap fris direct'],
+  ['peer', 'Peer', 'Fruit', 1, [57, 0.4, 13, 0.1, 3.1], [['stuk', 170]], 'zoet fris direct'],
+  ['sinaasappel', 'Sinaasappel', 'Fruit', 1, [47, 0.9, 10, 0.1, 2.2], [['stuk', 150]], 'zoet fris direct'],
+  ['mandarijn', 'Mandarijn', 'Fruit', 1, [53, 0.8, 12, 0.3, 1.8], [['stuk', 70]], 'zoet fris direct'],
+  ['druiven', 'Druiven', 'Fruit', 1, [69, 0.7, 17, 0.2, 0.9], [['handje', 100], ['kom', 150]], 'zoet fris direct royaal'],
+  ['watermeloen', 'Watermeloen', 'Fruit', 1, [30, 0.6, 7.5, 0.2, 0.4], [['partje', 250], ['kom', 200]], 'zoet fris direct royaal'],
+  ['cavaillon', 'Cavaillonmeloen', 'Fruit', 1, [34, 0.8, 8, 0.2, 0.9], [['halve', 250], ['kom', 200]], 'zoet fris direct royaal'],
+  ['vijg', 'Vijg (vers)', 'Fruit', 1, [74, 0.8, 19, 0.3, 2.9], [['stuk', 50]], 'zoet direct'],
+  ['granaatappel', 'Granaatappel', 'Fruit', 1, [83, 1.7, 19, 1.2, 4], [['halve (pitjes)', 85], ['hele (pitjes)', 170]], 'zoet fris'],
+  ['aardbeien', 'Aardbeien', 'Fruit', 1, [32, 0.7, 7.7, 0.3, 2], [['kom', 150], ['bakje', 250]], 'zoet fris direct royaal'],
+  ['blauwebes', 'Blauwe bessen', 'Fruit', 1, [57, 0.7, 14, 0.3, 2.4], [['kom', 125]], 'zoet fris direct'],
+  ['frambozen', 'Frambozen', 'Fruit', 1, [52, 1.2, 12, 0.7, 6.5], [['kom', 125]], 'zoet fris direct'],
+  ['roodfruit', 'Rood fruit (diepvries)', 'Fruit', 1, [40, 0.9, 8, 0.3, 3.5], [['kom', 150]], 'zoet fris royaal'],
+  ['kiwi', 'Kiwi', 'Fruit', 1, [61, 1.1, 15, 0.5, 3], [['stuk', 75]], 'zoet fris direct'],
+  ['mango', 'Mango', 'Fruit', 1, [60, 0.8, 15, 0.4, 1.6], [['halve', 150]], 'zoet fris'],
+  ['ananas', 'Ananas', 'Fruit', 1, [50, 0.5, 13, 0.1, 1.4], [['kom', 150]], 'zoet fris royaal'],
+  ['pruim', 'Pruim', 'Fruit', 1, [46, 0.7, 11, 0.3, 1.4], [['stuk', 60]], 'zoet direct'],
+  ['perzik', 'Perzik of nectarine', 'Fruit', 1, [44, 1, 10, 0.3, 1.7], [['stuk', 140]], 'zoet fris direct'],
+  ['dadelmedjool', 'Dadel, Medjool (gedroogd)', 'Fruit', 0, [282, 2.5, 75, 0.4, 8], [['stuk', 24]], 'zoet direct', { notitie: 'Gedroogd fruit valt niet onder je regel "vers fruit". Zet ZeroPoints aan als je dat anders wil.' }],
+  ['dadelklein', 'Dadel, klein (gedroogd)', 'Fruit', 0, [282, 2.5, 75, 0.4, 8], [['stuk', 8]], 'zoet direct', { notitie: 'Gedroogd fruit valt niet onder je regel "vers fruit".' }],
+  ['vijggedroogd', 'Vijg (gedroogd)', 'Fruit', 0, [250, 3.3, 64, 0.9, 9.8], [['stuk', 20]], 'zoet direct', { notitie: 'Gedroogd fruit valt niet onder je regel "vers fruit".' }],
+  ['rozijnen', 'Rozijnen', 'Fruit', 0, [300, 3, 70, 0.5, 4], [['handje', 30]], 'zoet direct'],
+
+  // Peulvruchten & tofu (ZeroPoints)
+  ['linzen', 'Linzen (gekookt)', 'Peulvruchten & tofu', 1, [116, 9, 20, 0.4, 8], [['kom', 150], ['halve kom', 75]], 'warm vult hartig'],
+  ['rodelinzen', 'Rode linzen (droog)', 'Peulvruchten & tofu', 1, [350, 24, 50, 1.5, 11], [['portie', 50], ['100 g', 100]], 'warm vult'],
+  ['kikkererwten', 'Kikkererwten (blik, uitgelekt)', 'Peulvruchten & tofu', 1, [140, 7.5, 20, 2.5, 7], [['kom', 150], ['blik', 240]], 'vult hartig'],
+  ['kidney', 'Kidneybonen', 'Peulvruchten & tofu', 1, [110, 8, 15, 0.5, 7], [['kom', 150]], 'vult'],
+  ['zwartebonen', 'Zwarte bonen', 'Peulvruchten & tofu', 1, [120, 8, 17, 0.5, 7], [['kom', 150]], 'vult'],
+  ['wittebonen', 'Witte bonen (zonder saus)', 'Peulvruchten & tofu', 1, [100, 7, 14, 0.5, 6], [['kom', 150]], 'vult'],
+  ['erwten', 'Doperwten', 'Peulvruchten & tofu', 1, [70, 5, 9, 0.4, 5], [['kom', 150]], 'warm'],
+  ['edamame', 'Edamame', 'Peulvruchten & tofu', 1, [121, 12, 9, 5, 5], [['kom', 100]], 'warm hartig vult'],
+  ['tofu', 'Tofu', 'Peulvruchten & tofu', 1, [125, 13, 2, 7, 1], [['portie', 125], ['blok', 250]], 'vult hartig'],
+  ['bonentomaat', 'Witte bonen in tomatensaus', 'Peulvruchten & tofu', 0, [85, 5, 13, 0.4, 4.5], [['kom', 200]], 'warm hartig vult'],
+
+  // Eieren
+  ['ei', 'Ei', 'Eieren', 1, [143, 12.6, 0.7, 9.9, 0], [['stuk', 60]], 'hartig vult warm'],
+
+  // Vlees & gevogelte
+  ['kipfilet', 'Kipfilet', 'Vlees & gevogelte', 1, [110, 23, 0, 1.5, 0], [['portie', 150], ['kleine portie', 100]], 'hartig vult warm'],
+  ['kalkoen', 'Kalkoenfilet', 'Vlees & gevogelte', 1, [105, 24, 0, 1, 0], [['portie', 150]], 'hartig vult warm'],
+  ['gehaktmager', 'Rundergehakt mager (max. 5% vet)', 'Vlees & gevogelte', 1, [130, 21, 0, 5, 0], [['portie', 100], ['grote portie', 150]], 'hartig vult warm'],
+  ['steak', 'Steak, mager', 'Vlees & gevogelte', 1, [125, 22, 0, 4, 0], [['portie', 150]], 'hartig vult warm'],
+  ['varkenshaas', 'Varkenshaas', 'Vlees & gevogelte', 1, [110, 22, 0, 2, 0], [['portie', 150]], 'hartig vult warm'],
+  ['kippendij', 'Kippendij zonder vel', 'Vlees & gevogelte', 0, [150, 19, 0, 8, 0], [['portie', 150]], 'hartig vult warm'],
+  ['gehakthoh', 'Gehakt half-om-half', 'Vlees & gevogelte', 0, [240, 18, 0, 18, 0], [['portie', 100], ['grote portie', 150]], 'hartig vult warm'],
+  ['kipbeleg', 'Kipfilet (beleg)', 'Vlees & gevogelte', 0, [100, 20, 1, 1.5, 0], [['plakje', 15]], 'hartig direct'],
+  ['ham', 'Gekookte ham', 'Vlees & gevogelte', 0, [110, 18, 1, 4, 0], [['plakje', 20]], 'hartig direct'],
+  ['salami', 'Salami', 'Vlees & gevogelte', 0, [400, 22, 1, 34, 0], [['plakje', 10]], 'hartig direct'],
+  ['spek', 'Spek (gebakken)', 'Vlees & gevogelte', 0, [400, 14, 0, 38, 0], [['reepje', 10]], 'hartig warm'],
+  ['americain', 'Américain préparé', 'Vlees & gevogelte', 0, [230, 13, 2, 19, 0], [['portie op brood', 40]], 'hartig direct'],
+
+  // Vis & zeevruchten (alle vis ZeroPoints)
+  ['zalm', 'Zalm', 'Vis & zeevruchten', 1, [200, 20, 0, 13, 0], [['portie', 150], ['kleine portie', 100]], 'hartig vult warm'],
+  ['gerooktezalm', 'Gerookte zalm', 'Vis & zeevruchten', 1, [180, 22, 0, 10, 0], [['plakje', 20], ['portie', 100]], 'hartig direct'],
+  ['kabeljauw', 'Kabeljauw', 'Vis & zeevruchten', 1, [82, 18, 0, 0.7, 0], [['portie', 150]], 'hartig vult warm'],
+  ['tonijn', 'Tonijn in water (blik)', 'Vis & zeevruchten', 1, [110, 25, 0, 1, 0], [['blikje', 110]], 'hartig vult direct'],
+  ['makreel', 'Makreel (gerookt)', 'Vis & zeevruchten', 1, [300, 19, 0, 25, 0], [['halve filet', 50], ['hele filet', 100]], 'hartig vult direct'],
+  ['haring', 'Haring (maatjes)', 'Vis & zeevruchten', 1, [200, 15, 0, 15, 0], [['stuk', 70]], 'hartig fris direct'],
+  ['sardines', 'Sardines (blik, uitgelekt)', 'Vis & zeevruchten', 1, [210, 24, 0, 12, 0], [['blikje', 90]], 'hartig direct'],
+  ['garnalen', 'Grijze garnalen', 'Vis & zeevruchten', 1, [90, 18, 0, 1.5, 0], [['eetlepel', 20], ['portie', 100]], 'hartig fris direct'],
+  ['scampi', 'Scampi', 'Vis & zeevruchten', 1, [100, 21, 0, 1.5, 0], [['portie', 150]], 'warm hartig'],
+  ['mosselen', 'Mosselen (zonder schelp)', 'Vis & zeevruchten', 1, [110, 18, 4, 2.5, 0], [['kilo mosselen', 250]], 'warm hartig vult royaal'],
+  ['vissticks', 'Vissticks', 'Vis & zeevruchten', 0, [200, 13, 17, 9, 1], [['stuk', 30]], 'warm hartig', { notitie: 'Het paneermeel kost punten, de vis zelf niet.' }],
+
+  // Zuivel
+  ['yoghurt', 'Magere natuuryoghurt', 'Zuivel', 1, [40, 4, 5, 0.1, 0], [['kom', 150], ['grote kom', 250]], 'fris vult direct'],
+  ['skyr', 'Skyr naturel', 'Zuivel', 1, [63, 11, 4, 0.2, 0], [['kom', 150]], 'fris vult direct'],
+  ['griekse0', 'Griekse yoghurt 0% (natuur)', 'Zuivel', 1, [55, 10, 4, 0, 0], [['kom', 150]], 'fris vult direct'],
+  ['griekse10', 'Griekse yoghurt 10%', 'Zuivel', 0, [120, 4, 4, 10, 0], [['kom', 150]], 'fris vult direct'],
+  ['plattekaas', 'Plattekaas mager', 'Zuivel', 0, [50, 8, 4, 0.2, 0], [['kom', 150]], 'fris vult direct'],
+  ['cottage', 'Cottage cheese', 'Zuivel', 0, [95, 12, 3, 4, 0], [['kom', 100]], 'hartig vult direct'],
+  ['fruityoghurt', 'Fruityoghurt (gesuikerd)', 'Zuivel', 0, [90, 3.5, 14, 2, 0], [['potje', 125]], 'zoet direct'],
+  ['sojayoghurt', 'Sojayoghurt natuur', 'Zuivel', 0, [50, 4, 2, 2.5, 1], [['kom', 150]], 'fris direct'],
+  ['melkhalf', 'Halfvolle melk', 'Zuivel', 0, [46, 3.5, 4.8, 1.5, 0], [['glas', 200], ['scheutje', 30]], '', ML],
+  ['melkmager', 'Magere melk', 'Zuivel', 0, [35, 3.5, 5, 0.1, 0], [['glas', 200], ['scheutje', 30]], '', ML],
+  ['melkvol', 'Volle melk', 'Zuivel', 0, [64, 3.3, 4.7, 3.6, 0], [['glas', 200]], '', ML],
+  ['kookroom', 'Kookroom 20%', 'Zuivel', 0, [200, 2.5, 4, 20, 0], [['eetlepel', 15], ['100 ml', 100]], '', ML],
+
+  // Kaas
+  ['gouda', 'Kaas, jong of belegen', 'Kaas', 0, [360, 25, 0, 28, 0], [['dunne plak', 20], ['dikke plak', 30]], 'hartig direct'],
+  ['kaaslight', 'Kaas light (20+ of 30+)', 'Kaas', 0, [270, 30, 0, 16, 0], [['plak', 25]], 'hartig direct'],
+  ['mozzarella', 'Mozzarella', 'Kaas', 0, [250, 18, 1, 19, 0], [['halve bol', 62.5], ['bol', 125]], 'hartig'],
+  ['mozzalight', 'Mozzarella light', 'Kaas', 0, [160, 20, 1, 9, 0], [['halve bol', 62.5], ['bol', 125]], 'hartig'],
+  ['feta', 'Feta', 'Kaas', 0, [265, 14, 1, 22, 0], [['blokje', 30], ['portie', 50]], 'hartig'],
+  ['parmezaan', 'Parmezaan (geraspt)', 'Kaas', 0, [390, 33, 0, 28, 0], [['eetlepel', 5]], 'hartig'],
+  ['geraspt', 'Geraspte kaas', 'Kaas', 0, [380, 27, 0, 30, 0], [['handje', 30]], 'hartig'],
+  ['brie', 'Brie of camembert', 'Kaas', 0, [330, 20, 0, 28, 0], [['portie', 30]], 'hartig direct'],
+  ['ricotta', 'Ricotta', 'Kaas', 0, [140, 10, 3, 10, 0], [['eetlepel', 30]], ''],
+  ['halloumi', 'Halloumi', 'Kaas', 0, [320, 22, 2, 25, 0], [['plak', 30]], 'hartig warm'],
+  ['smeerkaas', 'Smeerkaas natuur', 'Kaas', 0, [230, 5, 4, 21, 0], [['eetlepel', 15]], 'hartig direct'],
+  ['smeerkaaslight', 'Smeerkaas light', 'Kaas', 0, [130, 8, 5, 8, 0], [['eetlepel', 15]], 'hartig direct'],
+
+  // Brood & crackers
+  ['volkorenbrood', 'Volkorenbrood', 'Brood & crackers', 0, [230, 10, 40, 3, 7], [['sneetje', 35]], 'vult direct'],
+  ['meergranen', 'Meergranenbrood', 'Brood & crackers', 0, [250, 10, 40, 5, 6.5], [['sneetje', 35]], 'vult direct'],
+  ['witbrood', 'Wit brood', 'Brood & crackers', 0, [250, 9, 48, 2, 2.5], [['sneetje', 30]], 'direct'],
+  ['pistolet', 'Pistolet (wit)', 'Brood & crackers', 0, [270, 9, 53, 2.5, 2.5], [['stuk', 55]], 'direct'],
+  ['volkorenpistolet', 'Volkoren pistolet', 'Brood & crackers', 0, [240, 10, 43, 3, 6], [['stuk', 60]], 'vult direct'],
+  ['croissant', 'Croissant', 'Brood & crackers', 0, [410, 8, 45, 21, 2.5], [['stuk', 50]], 'zoet direct'],
+  ['cracker', 'Volkorencracker (knäckebröd)', 'Brood & crackers', 0, [340, 10, 60, 1.5, 15], [['stuk', 11]], 'knap direct'],
+  ['rijstwafel', 'Rijstwafel', 'Brood & crackers', 0, [385, 8, 80, 3, 3], [['stuk', 7.5]], 'knap direct'],
+  ['maiswafel', 'Maïswafel', 'Brood & crackers', 0, [380, 8, 80, 3, 3], [['stuk', 6]], 'knap direct'],
+  ['beschuit', 'Beschuit', 'Brood & crackers', 0, [410, 10, 75, 6, 4], [['stuk', 10]], 'knap direct'],
+  ['wrap', 'Wrap (tortilla)', 'Brood & crackers', 0, [300, 8, 50, 7, 3], [['stuk', 60]], ''],
+  ['wrapvolkoren', 'Volkoren wrap', 'Brood & crackers', 0, [290, 9, 45, 7, 6], [['stuk', 60]], ''],
+  ['pita', 'Pitabroodje', 'Brood & crackers', 0, [275, 9, 55, 1.2, 2.2], [['stuk', 70]], ''],
+  ['naan', 'Naan', 'Brood & crackers', 0, [290, 8, 50, 6, 2], [['stuk', 90]], 'warm'],
+
+  // Granen & aardappelen
+  ['rijst', 'Rijst (gekookt)', 'Granen & aardappelen', 0, [130, 2.7, 28, 0.3, 0.4], [['kom', 150], ['halve kom', 75]], 'warm vult'],
+  ['zilvervlies', 'Volkorenrijst (gekookt)', 'Granen & aardappelen', 0, [123, 2.7, 26, 1, 1.8], [['kom', 150], ['halve kom', 75]], 'warm vult'],
+  ['pasta', 'Pasta (gekookt)', 'Granen & aardappelen', 0, [150, 5.5, 30, 0.9, 1.7], [['kom', 150], ['bord', 250]], 'warm vult'],
+  ['pastavolkoren', 'Volkorenpasta (gekookt)', 'Granen & aardappelen', 0, [140, 5.5, 26, 1, 4], [['kom', 150], ['bord', 250]], 'warm vult'],
+  ['couscous', 'Couscous (gekookt)', 'Granen & aardappelen', 0, [112, 3.8, 23, 0.2, 1.4], [['kom', 150]], 'warm vult'],
+  ['bulgur', 'Bulgur (gekookt)', 'Granen & aardappelen', 0, [83, 3, 19, 0.2, 4.5], [['kom', 150]], 'warm vult'],
+  ['quinoa', 'Quinoa (gekookt)', 'Granen & aardappelen', 0, [120, 4.4, 21, 1.9, 2.8], [['kom', 150]], 'warm vult'],
+  ['noedels', 'Eiernoedels (gekookt)', 'Granen & aardappelen', 0, [140, 5, 26, 2, 1.5], [['kom', 150]], 'warm vult'],
+  ['rijstnoedels', 'Rijstnoedels (gekookt)', 'Granen & aardappelen', 0, [110, 2, 25, 0.2, 1], [['kom', 150]], 'warm vult'],
+  ['gnocchi', 'Gnocchi', 'Granen & aardappelen', 0, [150, 3.5, 32, 0.5, 1.5], [['portie', 200]], 'warm vult'],
+  ['havermout', 'Havermout (droog)', 'Granen & aardappelen', 0, [370, 13, 60, 7, 10], [['portie', 40], ['eetlepel', 10]], 'warm vult'],
+  ['muesli', 'Muesli (ongezoet)', 'Granen & aardappelen', 0, [360, 10, 60, 6, 8], [['portie', 45]], 'knap vult'],
+  ['cornflakes', 'Cornflakes', 'Granen & aardappelen', 0, [370, 7, 84, 0.9, 3], [['kom', 30]], 'knap direct'],
+  ['aardappel', 'Aardappel (gekookt)', 'Granen & aardappelen', 0, [77, 2, 17, 0.1, 2], [['stuk', 120], ['portie', 200]], 'warm vult'],
+  ['puree', 'Puree (met melk en boter)', 'Granen & aardappelen', 0, [100, 2, 14, 4, 1.5], [['portie', 200]], 'warm vult'],
+  ['zoeteaardappel', 'Zoete aardappel', 'Granen & aardappelen', 0, [86, 1.6, 20, 0.1, 3], [['stuk', 200]], 'warm vult'],
+  ['frieten', 'Frieten (frituur)', 'Granen & aardappelen', 0, [300, 3.5, 37, 15, 3.5], [['klein pakje', 150], ['middel pakje', 250]], 'warm hartig'],
+  ['ovenfrieten', 'Ovenfrieten', 'Granen & aardappelen', 0, [150, 2.5, 24, 5, 2.5], [['portie', 150]], 'warm hartig'],
+  ['mais', 'Maïs', 'Granen & aardappelen', 0, [86, 3.3, 19, 1.4, 2.7], [['kom', 100]], ''],
+
+  // Noten & zaden
+  ['amandelen', 'Amandelen', 'Noten & zaden', 0, [600, 21, 9, 52, 12], [['handje', 30], ['half handje', 15]], 'knap direct hartig'],
+  ['walnoten', 'Walnoten', 'Noten & zaden', 0, [680, 15, 7, 65, 6.7], [['handje', 30]], 'knap direct'],
+  ['cashew', 'Cashewnoten', 'Noten & zaden', 0, [580, 18, 30, 46, 3.3], [['handje', 30]], 'knap direct'],
+  ['notenmix', 'Gemengde noten (ongezouten)', 'Noten & zaden', 0, [620, 18, 15, 55, 7], [['handje', 30]], 'knap direct'],
+  ['pindas', "Pinda's (gezouten)", 'Noten & zaden', 0, [600, 26, 12, 50, 8], [['handje', 30]], 'knap hartig direct'],
+  ['pindakaas', 'Pindakaas', 'Noten & zaden', 0, [600, 25, 13, 50, 7], [['koffielepel', 5], ['eetlepel', 15]], ''],
+  ['pompoenpitten', 'Pompoenpitten', 'Noten & zaden', 0, [570, 30, 10, 49, 6], [['eetlepel', 10]], 'knap'],
+  ['zonnepitten', 'Zonnebloempitten', 'Noten & zaden', 0, [600, 21, 12, 51, 9], [['eetlepel', 10]], 'knap'],
+  ['chiazaad', 'Chiazaad', 'Noten & zaden', 0, [490, 17, 8, 31, 34], [['eetlepel', 12]], ''],
+  ['lijnzaad', 'Lijnzaad', 'Noten & zaden', 0, [530, 18, 1.6, 42, 27], [['eetlepel', 10]], ''],
+  ['tahin', 'Tahin', 'Noten & zaden', 0, [600, 20, 10, 54, 9], [['eetlepel', 15]], ''],
+
+  // Bereidingsvet (vetregel: elk vet telt hetzelfde)
+  ['olijfolie', 'Olijfolie', 'Bereidingsvet', 0, [900, 0, 0, 100, 0], [['1 koffielepel', 4.5, 1], ['2 koffielepels', 9, 2], ['3 koffielepels', 13.5, 3]], '', VET],
+  ['boter', 'Boter', 'Bereidingsvet', 0, [740, 0.7, 0.6, 82, 0], [['1 koffielepel', 5, 1], ['2 koffielepels', 10, 2], ['3 koffielepels', 15, 3]], '', VET],
+  ['zonneolie', 'Zonnebloemolie', 'Bereidingsvet', 0, [900, 0, 0, 100, 0], [['1 koffielepel', 4.5, 1], ['2 koffielepels', 9, 2], ['3 koffielepels', 13.5, 3]], '', VET],
+  ['koolzaadolie', 'Koolzaadolie', 'Bereidingsvet', 0, [900, 0, 0, 100, 0], [['1 koffielepel', 4.5, 1], ['2 koffielepels', 9, 2], ['3 koffielepels', 13.5, 3]], '', VET],
+  ['kokosolie', 'Kokosolie', 'Bereidingsvet', 0, [900, 0, 0, 100, 0], [['1 koffielepel', 4.5, 1], ['2 koffielepels', 9, 2], ['3 koffielepels', 13.5, 3]], '', VET],
+  ['sesamolie', 'Sesamolie', 'Bereidingsvet', 0, [900, 0, 0, 100, 0], [['1 koffielepel', 4.5, 1], ['2 koffielepels', 9, 2], ['3 koffielepels', 13.5, 3]], '', VET],
+  ['ghee', 'Ghee', 'Bereidingsvet', 0, [900, 0, 0, 100, 0], [['1 koffielepel', 4.5, 1], ['2 koffielepels', 9, 2], ['3 koffielepels', 13.5, 3]], '', VET],
+  ['bakboter', 'Vloeibare bakboter of margarine', 'Bereidingsvet', 0, [720, 0, 0, 80, 0], [['1 koffielepel', 5, 1], ['2 koffielepels', 10, 2], ['3 koffielepels', 15, 3]], '', VET],
+
+  // Sauzen & smeersels
+  ['hummus', 'Hummus', 'Sauzen & smeersels', 0, [290, 7, 14, 22, 6], [['eetlepel', 20]], 'hartig direct'],
+  ['tzatziki', 'Tzatziki', 'Sauzen & smeersels', 0, [100, 4, 4, 7, 0], [['eetlepel', 25]], 'hartig fris direct'],
+  ['mayo', 'Mayonaise', 'Sauzen & smeersels', 0, [700, 1, 1, 77, 0], [['koffielepel', 5], ['eetlepel', 15]], ''],
+  ['mayolight', 'Mayonaise light', 'Sauzen & smeersels', 0, [300, 1, 8, 30, 0], [['eetlepel', 15]], ''],
+  ['ketchup', 'Ketchup', 'Sauzen & smeersels', 0, [110, 1.5, 24, 0.2, 0.5], [['eetlepel', 15]], ''],
+  ['mosterd', 'Mosterd', 'Sauzen & smeersels', 0, [100, 6, 5, 6, 3], [['koffielepel', 5]], ''],
+  ['sojasaus', 'Sojasaus', 'Sauzen & smeersels', 0, [60, 8, 6, 0, 0], [['eetlepel', 15]], '', ML],
+  ['pesto', 'Pesto', 'Sauzen & smeersels', 0, [450, 5, 6, 45, 2], [['eetlepel', 15]], ''],
+  ['vinaigrette', 'Vinaigrette', 'Sauzen & smeersels', 0, [450, 0, 5, 48, 0], [['eetlepel', 15]], '', ML],
+  ['pastasaus', 'Pastasaus (kant-en-klaar)', 'Sauzen & smeersels', 0, [60, 1.5, 8, 2.5, 1.5], [['kom', 150]], ''],
+  ['kokosmelk', 'Kokosmelk', 'Sauzen & smeersels', 0, [180, 1.8, 3, 18, 0], [['100 ml', 100], ['blik', 400]], '', ML],
+  ['kokoslight', 'Kokosmelk light', 'Sauzen & smeersels', 0, [70, 0.7, 2, 7, 0], [['100 ml', 100], ['blik', 400]], '', ML],
+  ['currypasta', 'Currypasta (rood of groen)', 'Sauzen & smeersels', 0, [120, 2, 10, 8, 3], [['eetlepel', 15]], ''],
+  ['harissa', 'Harissa', 'Sauzen & smeersels', 0, [100, 3, 10, 5, 5], [['koffielepel', 5]], ''],
+  ['sriracha', 'Hete saus (sriracha)', 'Sauzen & smeersels', 0, [100, 2, 20, 1, 1], [['koffielepel', 5]], ''],
+  ['balsamico', 'Balsamicoazijn', 'Sauzen & smeersels', 0, [90, 0.5, 17, 0, 0], [['eetlepel', 15]], '', ML],
+  ['choco', 'Choco (hazelnootpasta)', 'Sauzen & smeersels', 0, [540, 6, 57, 31, 3.4], [['koffielepel', 7], ['eetlepel', 15]], 'zoet'],
+  ['speculoospasta', 'Speculoospasta', 'Sauzen & smeersels', 0, [580, 2.5, 57, 38, 1.5], [['koffielepel', 7]], 'zoet'],
+  ['confituur', 'Confituur', 'Sauzen & smeersels', 0, [240, 0.4, 59, 0, 1], [['koffielepel', 10]], 'zoet'],
+  ['honing', 'Honing', 'Sauzen & smeersels', 0, [305, 0.3, 82, 0, 0], [['koffielepel', 7]], 'zoet'],
+  ['bouillon', 'Bouillon (groente of kip)', 'Sauzen & smeersels', 0, [5, 0.5, 0.5, 0.2, 0], [['kom', 250]], 'warm hartig direct', ML],
+
+  // Snacks & zoet
+  ['puur', 'Pure chocolade 70%', 'Snacks & zoet', 0, [580, 8, 35, 42, 11], [['blokje', 10]], 'zoet direct'],
+  ['melkchoc', 'Melkchocolade', 'Snacks & zoet', 0, [540, 7, 57, 31, 2], [['blokje', 10]], 'zoet direct'],
+  ['chips', 'Chips', 'Snacks & zoet', 0, [530, 6, 52, 33, 4.5], [['handje', 15], ['zakje', 30]], 'hartig knap direct'],
+  ['popcorn', 'Popcorn (zelf gepoft, zout)', 'Snacks & zoet', 0, [390, 12, 62, 9, 14], [['kom', 20], ['grote kom', 40]], 'hartig knap royaal'],
+  ['olijven', 'Olijven', 'Snacks & zoet', 0, [145, 1, 1, 15, 3], [['handje', 30]], 'hartig direct'],
+  ['kikkersnack', 'Geroosterde kikkererwten', 'Snacks & zoet', 0, [380, 18, 45, 12, 15], [['handje', 30]], 'hartig knap direct vult'],
+  ['speculoos', 'Speculoos', 'Snacks & zoet', 0, [480, 5.5, 70, 19, 2], [['koekje', 7]], 'zoet knap direct'],
+  ['koekje', 'Droog koekje (bv. Maria)', 'Snacks & zoet', 0, [430, 7, 75, 10, 2.5], [['koekje', 6]], 'zoet knap direct'],
+  ['rijstwafelchoc', 'Rijstwafel met chocolade', 'Snacks & zoet', 0, [490, 6, 65, 22, 3], [['stuk', 16]], 'zoet knap direct'],
+  ['ijs', 'Roomijs', 'Snacks & zoet', 0, [200, 3.5, 24, 10, 0.5], [['bolletje', 50]], 'zoet fris'],
+  ['waterijs', 'Waterijsje', 'Snacks & zoet', 0, [80, 0, 20, 0, 0], [['stuk', 60]], 'zoet fris direct'],
+  ['eiwitreep', 'Eiwitreep', 'Snacks & zoet', 0, [360, 30, 35, 10, 8], [['reep', 45]], 'zoet vult direct'],
+  ['snoep', 'Snoepjes (winegums)', 'Snacks & zoet', 0, [330, 5, 77, 0, 0], [['handje', 25]], 'zoet direct'],
+  ['luiksewafel', 'Luikse wafel', 'Snacks & zoet', 0, [450, 6, 50, 24, 1.5], [['stuk', 90]], 'zoet direct'],
+
+  // Dranken
+  ['koffie', 'Koffie of thee (zonder suiker)', 'Dranken', 0, [1, 0.1, 0, 0, 0], [['tas', 200]], 'warm direct', ML],
+  ['cappuccino', 'Cappuccino (halfvolle melk)', 'Dranken', 0, [40, 2.2, 3, 1.4, 0], [['tas', 200]], 'warm', ML],
+  ['latte', 'Latte macchiato', 'Dranken', 0, [45, 2.5, 3.5, 1.6, 0], [['glas', 300]], 'warm', ML],
+  ['frisdrank', 'Frisdrank (cola, limonade)', 'Dranken', 0, [42, 0, 10.6, 0, 0], [['blikje', 330], ['glas', 200]], 'zoet fris', ML],
+  ['frisdrankzero', 'Frisdrank zero of light', 'Dranken', 0, [0.5, 0, 0, 0, 0], [['blikje', 330]], 'fris', ML],
+  ['fruitsap', 'Fruitsap', 'Dranken', 0, [45, 0.7, 10, 0.2, 0.2], [['glas', 200]], 'zoet fris', ML],
+  ['smoothie', 'Fruitsmoothie', 'Dranken', 0, [55, 0.7, 12, 0.3, 1.5], [['glas', 250]], 'zoet fris', ML],
+  ['havermelk', 'Havermelk', 'Dranken', 0, [45, 1, 6.5, 1.5, 0.8], [['glas', 200]], '', ML],
+  ['sojamelk', 'Sojamelk (ongezoet)', 'Dranken', 0, [33, 3.3, 0.5, 1.8, 0.5], [['glas', 200]], '', ML],
+  ['pils', 'Bier (pils)', 'Dranken', 0, [43, 0.5, 3.1, 0, 0], [['glas', 250], ['flesje', 330]], '', ML],
+  ['tripel', 'Speciaalbier (tripel)', 'Dranken', 0, [80, 0.6, 5, 0, 0], [['glas', 330]], '', ML],
+  ['bier0', 'Alcoholvrij bier', 'Dranken', 0, [20, 0.3, 4.5, 0, 0], [['blikje', 330]], 'fris', ML],
+  ['wijn', 'Wijn', 'Dranken', 0, [83, 0.1, 2.6, 0, 0], [['glas', 150]], '', ML],
+
+  // Kant-en-klaar
+  ['kantklaar', 'Kant-en-klaarmaaltijd (gemiddeld)', 'Kant-en-klaar', 0, [120, 6, 14, 4.5, 2], [['bakje', 400]], 'warm vult direct'],
+  ['bolognese', 'Spaghetti bolognese (kant-en-klaar)', 'Kant-en-klaar', 0, [140, 7, 17, 4.5, 1.5], [['bord', 400]], 'warm vult'],
+  ['lasagne', 'Lasagne', 'Kant-en-klaar', 0, [150, 8, 13, 7, 1.5], [['portie', 350]], 'warm vult'],
+  ['pizza', 'Pizza margherita', 'Kant-en-klaar', 0, [250, 11, 30, 9, 2], [['halve pizza', 175], ['hele pizza', 350]], 'warm hartig'],
+  ['soepkk', 'Groentesoep (kant-en-klaar)', 'Kant-en-klaar', 0, [30, 1, 4, 1, 1], [['kom', 250]], 'warm hartig direct', ML],
+  ['sushi', 'Sushi', 'Kant-en-klaar', 0, [150, 5, 28, 2, 1], [['stuk', 30]], 'hartig fris'],
+  ['falafel', 'Falafel', 'Kant-en-klaar', 0, [330, 13, 32, 18, 5], [['balletje', 20]], 'hartig warm'],
+  ['durum', 'Dürüm (kip)', 'Kant-en-klaar', 0, [220, 12, 20, 10, 2], [['stuk', 350]], 'warm hartig vult'],
+  ['frikandel', 'Frikandel', 'Kant-en-klaar', 0, [270, 11, 10, 20, 1], [['stuk', 70]], 'warm hartig'],
+  ['kroket', 'Kroket', 'Kant-en-klaar', 0, [230, 6, 20, 14, 1.5], [['stuk', 70]], 'warm hartig'],
+];
+
+// Snelle ideeën bij eetdrang: [product-id, portie-index, aantal]
+const IDEEEN = [
+  { id: 'i_skyr', naam: 'Skyr met rood fruit', uitleg: 'Romig, fris en het vult lang. Diepvriesfruit maakt het bijna ijs.', items: [['skyr', 0, 1], ['roodfruit', 0, 1]], tags: 'zoet fris vult direct royaal' },
+  { id: 'i_appel', naam: 'Warme appel met kaneel', uitleg: 'Appel in partjes, twee minuten in de microgolf, flink wat kaneel erover.', items: [['appel', 0, 1]], tags: 'zoet warm' },
+  { id: 'i_druiven', naam: 'Diepvriesdruiven', uitleg: 'Leg druiven een uur in de vriezer. Knapperig, en je eet ze vanzelf trager.', items: [['druiven', 1, 1]], tags: 'zoet fris knap royaal' },
+  { id: 'i_bananenijs', naam: 'Bananenijs', uitleg: 'Bevroren banaan met een scheut yoghurt mixen tot zacht ijs.', items: [['banaan', 0, 1], ['yoghurt', 0, 0.5]], tags: 'zoet fris' },
+  { id: 'i_yoggra', naam: 'Yoghurt met granaatappel', uitleg: 'Een kom yoghurt met granaatappelpitjes en wat kaneel of vanille.', items: [['yoghurt', 0, 1], ['granaatappel', 0, 1]], tags: 'zoet fris direct vult' },
+  { id: 'i_staafjes', naam: 'Groentestaafjes met tzatziki', uitleg: 'Komkommer, wortel en paprika in reepjes om te dippen.', items: [['komkommer', 0, 1], ['wortel', 0, 1], ['paprika', 1, 1], ['tzatziki', 0, 2]], tags: 'hartig knap fris direct royaal' },
+  { id: 'i_witloof', naam: 'Witloofbootjes met grijze garnalen', uitleg: 'Witloofblaadjes vullen met garnalen, citroen en peterselie.', items: [['witloof', 0, 1], ['garnalen', 0, 2]], tags: 'hartig fris knap direct' },
+  { id: 'i_tonijn', naam: 'Tonijnsalade met mosterd', uitleg: 'Tonijn met mosterd, citroen en peper in plaats van mayonaise, met tomaat en komkommer.', items: [['tonijn', 0, 1], ['tomaat', 0, 1], ['komkommer', 0, 1], ['mosterd', 0, 1]], tags: 'hartig fris vult direct' },
+  { id: 'i_makreel', naam: 'Gerookte makreel op knäckebröd', uitleg: 'Met wat citroen en zwarte peper.', items: [['makreel', 0, 1], ['cracker', 0, 2]], tags: 'hartig knap vult direct' },
+  { id: 'i_rijstwafel', naam: 'Rijstwafels met hummus en komkommer', uitleg: 'Knapperig, romig en fris tegelijk.', items: [['rijstwafel', 0, 2], ['hummus', 0, 1], ['komkommer', 0, 1]], tags: 'hartig knap direct' },
+  { id: 'i_bouillonei', naam: 'Bouillon met ei', uitleg: 'Klop een ei door kokende bouillon, met lente-ui of chili.', items: [['bouillon', 0, 1], ['ei', 0, 1]], tags: 'warm hartig vult' },
+  { id: 'i_edamame', naam: 'Edamame met zeezout', uitleg: 'Diepvries edamame vier minuten koken, zeezout en chili erover.', items: [['edamame', 0, 1]], tags: 'warm hartig vult' },
+  { id: 'i_soep', naam: 'Kom groentesoep', uitleg: 'Maak op zondag een grote pot, dan staat er altijd een kom klaar.', items: [['groentesoep', 0, 1]], tags: 'warm hartig vult royaal' },
+  { id: 'i_linzen', naam: 'Linzen met citroen en komijn', uitleg: 'Opwarmen met komijn, citroensap en wat peterselie.', items: [['linzen', 0, 1]], tags: 'warm hartig vult' },
+  { id: 'i_omelet', naam: 'Omelet met spinazie', uitleg: 'Twee eieren, een kom spinazie, een koffielepel olie.', items: [['ei', 0, 2], ['spinazie', 0, 1], ['olijfolie', 0, 1]], tags: 'warm hartig vult' },
+  { id: 'i_bloemkool', naam: 'Geroosterde bloemkool met komijn', uitleg: 'Twintig minuten in de oven op 220 °C met komijn en zout.', items: [['bloemkool', 0, 2], ['olijfolie', 0, 1]], tags: 'warm hartig royaal' },
+  { id: 'i_popcorn', naam: 'Popcorn met paprikapoeder', uitleg: 'Zelf poffen zonder boter, paprikapoeder en zout erover.', items: [['popcorn', 0, 1]], tags: 'hartig knap royaal' },
+  { id: 'i_meloen', naam: 'Watermeloen met feta en munt', uitleg: 'Zoet en zout samen, heerlijk fris.', items: [['watermeloen', 1, 1], ['feta', 0, 1]], tags: 'zoet hartig fris' },
+];
+
+function seedProducts() {
+  return SEED.map(([id, naam, cat, zero, n, porties, tags, o]) => {
+    o = o || {};
+    return {
+      id, naam, cat, zero: !!zero, regel: o.regel || 'formule', eenheid: o.eenheid || 'g',
+      n: { kcal: n[0], eiwit: n[1], kh: n[2], vet: n[3], vezels: n[4] },
+      porties: porties.map(([label, g, x]) => {
+        const p = { label, g };
+        if (o.regel === 'vet') p.kl = x || 1; else if (x !== undefined) p.punten = x;
+        return p;
+      }),
+      tags: (tags || '').split(' ').filter(Boolean), fav: false, std: true, notitie: o.notitie || ''
+    };
+  });
+}
+
+// ===== Basis =====
+const BUILD = window.APP_BUILD || 'pwa';
+const APP_VERSION = '1.0.0';
+
+const clone = o => JSON.parse(JSON.stringify(o));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = (p = 'x') => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const pad = n => String(n).padStart(2, '0');
+const toKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fromKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (k, n) => { const d = fromKey(k); d.setDate(d.getDate() + n); return toKey(d); };
+const todayKey = () => toKey(new Date());
+const weekStartKey = k => { const d = fromKey(k); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return toKey(d); };
+const daysBetween = (a, b) => Math.round((fromKey(b) - fromKey(a)) / 86400000);
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const num = v => { const x = parseFloat(String(v ?? '').replace(',', '.')); return isFinite(x) ? x : NaN; };
+
+const DAGEN = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
+const DAGEN_KORT = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
+const MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+const fmtDate = k => { const d = fromKey(k); return `${DAGEN[d.getDay()]} ${d.getDate()} ${MAANDEN[d.getMonth()]}`; };
+const fmtShort = k => { const d = fromKey(k); return `${d.getDate()} ${MAANDEN[d.getMonth()].slice(0, 3)}`; };
+const nf0 = new Intl.NumberFormat('nl-BE', { maximumFractionDigits: 0 });
+const nf1 = new Intl.NumberFormat('nl-BE', { maximumFractionDigits: 1 });
+const fmtQty = q => { const w = Math.floor(q), h = Math.abs(q - w - 0.5) < 1e-9; if (h) return (w ? w : '') + '½'; return nf1.format(q); };
+
+const MOMENTEN = [['ontbijt', 'Ontbijt'], ['middag', 'Middag'], ['avond', 'Avond'], ['tussendoor', 'Tussendoor']];
+const momentLabel = m => (MOMENTEN.find(x => x[0] === m) || MOMENTEN[3])[1];
+function momentNu() {
+  const d = new Date(), h = d.getHours() + d.getMinutes() / 60;
+  if (h >= 4 && h < 10.5) return 'ontbijt';
+  if (h >= 11 && h < 14.5) return 'middag';
+  if (h >= 17 && h < 21) return 'avond';
+  return 'tussendoor';
+}
+
+// ===== Standaardinstellingen =====
+const DEFAULTS = {
+  dagBudget: 30, weekReserve: 28, budgetIngesteld: false,
+  formule: { kcal: 25, eiwit: 10, vezels: 5 },
+  vetPerKl: 2,
+  activiteiten: [
+    { id: 'fiets', naam: 'Rustig fietsen', min: 15, punten: 1 },
+    { id: 'zwem', naam: 'Zwemmen', min: 30, punten: 2 },
+    { id: 'wandel', naam: 'Wandelen', min: 15, punten: 1 }
+  ],
+  profiel: { geslacht: '', leeftijd: '', lengte: '', gewicht: '', streefgewicht: '', activiteit: 1.375, tekort: 500, zeroKcal: 900, reservePerDag: 4 },
+  toonVoeding: false, lastBackup: null, laatstePorties: {}, laatsteVet: 'olijfolie',
+  seedVersion: 0, verwijderdeStandaard: [], testMeldingWeg: false
+};
+
+function mergeDefaults(v) {
+  v = v || {};
+  const s = Object.assign(clone(DEFAULTS), v);
+  s.formule = Object.assign(clone(DEFAULTS.formule), v.formule || {});
+  s.profiel = Object.assign(clone(DEFAULTS.profiel), v.profiel || {});
+  if (!Array.isArray(s.activiteiten) || !s.activiteiten.length) s.activiteiten = clone(DEFAULTS.activiteiten);
+  s.laatstePorties = s.laatstePorties || {};
+  s.verwijderdeStandaard = s.verwijderdeStandaard || [];
+  return s;
+}
+
+// ===== Opslag: IndexedDB op het toestel =====
+// Elke databaseversie krijgt een migratiestap. Bestaande gegevens worden nooit gewist bij een update.
+const DB_NAME = 'mijn-voeding', DB_VERSION = 1;
+const STORES = ['products', 'meals', 'log', 'activities', 'settings'];
+
+const Store = {
+  db: null, mem: null,
+  open() {
+    return new Promise((res, rej) => {
+      if (!self.indexedDB) return rej(new Error('Geen IndexedDB'));
+      let klaar = false;
+      const t = setTimeout(() => { if (!klaar) { klaar = true; rej(new Error('Time-out')); } }, 4000);
+      let req;
+      try { req = indexedDB.open(DB_NAME, DB_VERSION); } catch (e) { clearTimeout(t); return rej(e); }
+      req.onupgradeneeded = ev => {
+        const db = req.result, oud = ev.oldVersion;
+        if (oud < 1) {
+          for (const s of STORES) if (!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath: s === 'settings' ? 'key' : 'id' });
+        }
+        // Volgende versies: if (oud < 2) { ... }
+      };
+      req.onsuccess = () => {
+        if (klaar) { try { req.result.close(); } catch (e) { } return; }
+        klaar = true; clearTimeout(t);
+        this.db = req.result;
+        this.db.onversionchange = () => { try { this.db.close(); } catch (e) { } location.reload(); };
+        res();
+      };
+      req.onerror = () => { if (klaar) return; klaar = true; clearTimeout(t); rej(req.error); };
+    });
+  },
+  useMemory() { this.mem = {}; for (const s of STORES) this.mem[s] = new Map(); },
+  key: o => o.id ?? o.key,
+  all(store) {
+    if (this.mem) return Promise.resolve([...this.mem[store].values()].map(clone));
+    return new Promise((res, rej) => {
+      const r = this.db.transaction(store, 'readonly').objectStore(store).getAll();
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+  },
+  write(store, fn) {
+    if (this.mem) { fn({ put: o => this.mem[store].set(this.key(o), clone(o)), delete: id => this.mem[store].delete(id), clear: () => this.mem[store].clear() }); return Promise.resolve(); }
+    return new Promise((res, rej) => {
+      const tx = this.db.transaction(store, 'readwrite');
+      fn(tx.objectStore(store));
+      tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+    });
+  },
+  put(store, obj) { return this.write(store, os => os.put(obj)); },
+  del(store, id) { return this.write(store, os => os.delete(id)); },
+  bulkPut(store, arr) { return this.write(store, os => { for (const o of arr) os.put(o); }); },
+  // Alles in één transactie: een terugzetting lukt volledig of verandert niets.
+  replaceAll(data) {
+    if (this.mem) { for (const s of STORES) { this.mem[s].clear(); for (const o of data[s] || []) this.mem[s].set(this.key(o), clone(o)); } return Promise.resolve(); }
+    return new Promise((res, rej) => {
+      const tx = this.db.transaction(STORES, 'readwrite');
+      for (const s of STORES) { const os = tx.objectStore(s); os.clear(); for (const o of data[s] || []) os.put(o); }
+      tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+    });
+  }
+};
+
+// ===== Toestand =====
+const S = {
+  products: [], meals: [], log: [], activities: [], settings: mergeDefaults({}),
+  storageOK: true, persistent: null,
+  view: 'vandaag', day: todayKey(), week: weekStartKey(todayKey()),
+  prodQ: '', prodCat: 'alle', _usage: null
+};
+const P = id => S.products.find(p => p.id === id);
+
+async function bewaar(store, obj) {
+  try { await Store.put(store, obj); }
+  catch (e) { console.error(e); toast('Opslaan mislukt. Maak zo snel mogelijk een back-up.'); }
+}
+async function verwijder(store, id) {
+  try { await Store.del(store, id); }
+  catch (e) { console.error(e); toast('Verwijderen mislukt.'); }
+}
+function saveSettings() { return bewaar('settings', { key: 'app', value: S.settings }); }
+
+async function mergeSeeds() {
+  const have = new Set(S.products.map(p => p.id));
+  const weg = new Set(S.settings.verwijderdeStandaard);
+  const nieuw = seedProducts().filter(p => !have.has(p.id) && !weg.has(p.id));
+  if (nieuw.length) {
+    S.products.push(...nieuw);
+    try { await Store.bulkPut('products', nieuw); } catch (e) { console.error(e); }
+  }
+  if (S.settings.seedVersion !== SEED_VERSION) { S.settings.seedVersion = SEED_VERSION; await saveSettings(); }
+}
+
+async function loadAll() {
+  const res = await Promise.all(STORES.map(s => Store.all(s).catch(() => [])));
+  const [products, meals, log, activities, settingsRows] = res;
+  S.products = products; S.meals = meals; S.log = log; S.activities = activities;
+  const app = settingsRows.find(r => r.key === 'app');
+  S.settings = mergeDefaults(app && app.value);
+  S._usage = null;
+  await mergeSeeds();
+}
+
+// ===== Puntenmotor =====
+// Volgorde: ZeroPoints → vetregel → vaste punten → formule.
+// Formule (eigen ontwerp): kcal ÷ 25 − eiwit (g) ÷ 10 − vezels (g) ÷ 5, nooit onder 0, afgerond per portie.
+function nutr(p, g) {
+  const f = (num(g) || 0) / 100, n = p.n || {};
+  return { kcal: (n.kcal || 0) * f, eiwit: (n.eiwit || 0) * f, kh: (n.kh || 0) * f, vet: (n.vet || 0) * f, vezels: (n.vezels || 0) * f };
+}
+function rawPoints(n) {
+  const F = S.settings.formule;
+  return n.kcal / Math.max(1, F.kcal) - n.eiwit / Math.max(1, F.eiwit) - n.vezels / Math.max(1, F.vezels);
+}
+const heeftVast = por => por && por.punten !== undefined && por.punten !== null && por.punten !== '' && isFinite(num(por.punten));
+function portionPoints(p, por) {
+  if (!p || !por) return 0;
+  if (p.zero) return 0;
+  if (p.regel === 'vet') return (num(por.kl) || 1) * S.settings.vetPerKl;
+  if (heeftVast(por)) return num(por.punten);
+  if (p.regel === 'vast') return 0;
+  return Math.max(0, Math.round(rawPoints(nutr(p, por.g))));
+}
+function regelUitleg(p, por) {
+  if (p.zero) return 'ZeroPoints: 0 punten. De calorieën tellen wel mee in je voedingswaarden.';
+  if (p.regel === 'vet') return `Vetregel: elk bereidingsvet telt ${S.settings.vetPerKl} punten per koffielepel.`;
+  if (heeftVast(por)) return 'Vaste punten voor deze portie.';
+  const n = nutr(p, por.g), F = S.settings.formule, r = rawPoints(n);
+  return `${nf0.format(n.kcal)} kcal ÷ ${F.kcal} − ${nf1.format(n.eiwit)} g eiwit ÷ ${F.eiwit} − ${nf1.format(n.vezels)} g vezels ÷ ${F.vezels} = ${nf1.format(r)}, afgerond ${Math.max(0, Math.round(r))}`;
+}
+const entryPoints = (p, por, qty) => Math.round(portionPoints(p, por) * qty);
+const eenheid = p => p && p.eenheid === 'ml' ? 'ml' : 'g';
+
+function makeEntry(p, pi, qty, moment, date) {
+  const por = p.porties[pi] || p.porties[0];
+  const unit = portionPoints(p, por);
+  return {
+    id: uid('e'), date, moment, pid: p.id, pi, naam: p.naam, cat: p.cat, zero: !!p.zero,
+    portie: por.label, g: por.g, eenheid: eenheid(p), qty,
+    unitPunten: unit, punten: Math.round(unit * qty), unitN: nutr(p, por.g), ts: Date.now()
+  };
+}
+async function addEntry(e) {
+  S.log.push(e); S._usage = null;
+  S.settings.laatstePorties[e.pid] = { pi: e.pi, qty: e.qty };
+  await bewaar('log', e); await saveSettings();
+}
+
+function usage() {
+  if (S._usage) return S._usage;
+  const u = {}, grens = addDays(todayKey(), -120);
+  for (const e of S.log) if (e.date >= grens) u[e.pid] = (u[e.pid] || 0) + 1;
+  return (S._usage = u);
+}
+function lastPortion(p) {
+  const lp = S.settings.laatstePorties[p.id];
+  if (lp && p.porties[lp.pi]) return { pi: lp.pi, qty: lp.qty || 1 };
+  return { pi: 0, qty: 1 };
+}
+
+// ===== Dag, week en budget =====
+function dayStats(k) {
+  const r = { punten: 0, kcal: 0, eiwit: 0, kh: 0, vet: 0, vezels: 0, zeroKcal: 0, fruitKcal: 0, fruitPorties: 0, n: 0 };
+  for (const e of S.log) {
+    if (e.date !== k) continue;
+    const q = e.qty, n = e.unitN || {};
+    r.n++; r.punten += e.punten;
+    r.kcal += (n.kcal || 0) * q; r.eiwit += (n.eiwit || 0) * q; r.kh += (n.kh || 0) * q; r.vet += (n.vet || 0) * q; r.vezels += (n.vezels || 0) * q;
+    if (e.zero) r.zeroKcal += (n.kcal || 0) * q;
+    if (e.cat === 'Fruit') { r.fruitKcal += (n.kcal || 0) * q; r.fruitPorties += q; }
+  }
+  return r;
+}
+function weekInfo(wk) {
+  const B = S.settings.dagBudget, eind = addDays(wk, 6);
+  let over = 0;
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const k = addDays(wk, i), st = dayStats(k), o = Math.max(0, st.punten - B);
+    over += o; days.push({ k, st, o });
+  }
+  const acts = S.activities.filter(a => a.date >= wk && a.date <= eind);
+  const bonus = acts.reduce((s, a) => s + (a.punten || 0), 0);
+  const R = S.settings.weekReserve;
+  return { days, acts, bonus, reserve: R, over, beschikbaar: R + bonus, rest: R + bonus - over };
+}
+
+const ACTNIVEAUS = [[1.2, 'Vooral zittend'], [1.375, 'Licht actief'], [1.55, 'Matig actief'], [1.725, 'Zwaar fysiek werk']];
+function budgetVoorstel(pr) {
+  const w = num(pr.gewicht), h = num(pr.lengte), a = num(pr.leeftijd);
+  if (!(w > 0) || !(h > 0) || !(a > 0) || !pr.geslacht) return null;
+  const bmr = 10 * w + 6.25 * h - 5 * a + (pr.geslacht === 'man' ? 5 : -161);
+  const tdee = bmr * (num(pr.activiteit) || 1.375);
+  const minimum = pr.geslacht === 'man' ? 1500 : 1200;
+  let doel = tdee - (num(pr.tekort) || 0), begrensd = false;
+  if (doel < minimum) { doel = minimum; begrensd = true; }
+  const zk = Math.max(0, num(pr.zeroKcal) || 0);
+  const puntenKcal = Math.max(0, doel - zk);
+  const perDag = Math.round(puntenKcal / Math.max(1, S.settings.formule.kcal));
+  const res = Math.max(0, Math.min(Math.round(num(pr.reservePerDag) || 0), perDag));
+  return { bmr, tdee, doel, minimum, begrensd, zk, puntenKcal, perDag, dag: perDag - res, week: res * 7, res };
+}
+function gemetenZeroKcal() {
+  const tot = todayKey(); let som = 0, n = 0;
+  for (let i = 1; i <= 14; i++) {
+    const k = addDays(tot, -i), st = dayStats(k);
+    if (st.n >= 3) { som += st.zeroKcal; n++; }
+  }
+  return n ? { gem: som / n, n } : null;
+}
+
+// ===== Back-up =====
+function backupObject() {
+  return {
+    app: 'mijn-voeding', schema: 1, versie: APP_VERSION, gemaakt: new Date().toISOString(),
+    data: { products: S.products, meals: S.meals, log: S.log, activities: S.activities, settings: S.settings }
+  };
+}
+function parseBackup(text) {
+  let o;
+  try { o = JSON.parse(text); } catch (e) { throw new Error('Dit is geen geldig back-upbestand (geen leesbare tekst).'); }
+  if (!o || o.app !== 'mijn-voeding' || !o.data) throw new Error('Dit bestand komt niet van deze app.');
+  const d = o.data;
+  for (const k of ['products', 'meals', 'log', 'activities']) if (d[k] !== undefined && !Array.isArray(d[k])) throw new Error('Het back-upbestand is beschadigd.');
+  return o;
+}
+async function restoreBackup(o) {
+  const d = o.data;
+  const data = {
+    products: d.products || [], meals: d.meals || [], log: d.log || [], activities: d.activities || [],
+    settings: [{ key: 'app', value: mergeDefaults(d.settings || {}) }]
+  };
+  await Store.replaceAll(data);
+  await loadAll();
+}
+
+// ===== Iconen =====
+const ICON = {
+  plus: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  links: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
+  rechts: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>',
+  sluit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  ster: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></svg>',
+  bord: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/></svg>',
+  week: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+  pot: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10M8.5 3.5V7C6.3 8 5 9.6 5 12v6a2.5 2.5 0 002.5 2.5h9A2.5 2.5 0 0019 18v-6c0-2.4-1.3-4-3.5-5V3.5"/><path d="M5 13.5h14"/></svg>',
+  regel: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M18 7h2M4 17h3M11 17h9"/><circle cx="15.5" cy="7" r="2.3"/><circle cx="8.5" cy="17" r="2.3"/></svg>',
+  fiets: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l3.5-7h6L18 16M9.5 9L8 6H5.5M13 9l1.5-3H17"/></svg>',
+  prul: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12.5h8L17 7"/></svg>'
+};
+
+const $ = (s, el = document) => el.querySelector(s);
+const badge = (pts, zero) => `<span class="pts${zero || pts === 0 ? ' pts-zero' : ''} tnum">${pts}</span>`;
+const regelTekst = p => p.zero ? 'ZeroPoints' : p.regel === 'vet' ? 'Vetregel' : p.regel === 'vast' ? 'Vaste punten' : '';
+const regelBadge = p => { const t = regelTekst(p); return t ? `<span class="tag${p.zero ? ' tag-zero' : ''}">${t}</span>` : ''; };
+
+// ===== Meldingen =====
+let toastT;
+function toast(msg, opt) {
+  const el = $('#toast');
+  el.innerHTML = `<span>${esc(msg)}</span>${opt && opt.actie ? `<button class="toast-btn" type="button">${esc(opt.actie)}</button>` : ''}`;
+  el.classList.add('show');
+  if (opt && opt.actie) el.querySelector('button').onclick = () => { el.classList.remove('show'); opt.fn(); };
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove('show'), opt && opt.actie ? 5000 : 2600);
+}
+
+// ===== Panelen (sheets) =====
+const sheets = [];
+function openSheet(html, opt = {}) {
+  const wrap = document.createElement('div');
+  wrap.className = 'sheet-wrap';
+  wrap.innerHTML = `<div class="sheet-backdrop" data-close></div><div class="sheet ${opt.cls || ''}" role="dialog" aria-modal="true" tabindex="-1">${html}</div>`;
+  document.body.appendChild(wrap);
+  wrap._onClose = opt.onClose;
+  sheets.push(wrap);
+  document.body.classList.add('noscroll');
+  wrap.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet(); });
+  requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('open')));
+  const sh = wrap.querySelector('.sheet');
+  try { sh.focus({ preventScroll: true }); } catch (e) { }
+  return sh;
+}
+function closeSheet() {
+  const w = sheets.pop();
+  if (!w) return;
+  w.classList.remove('open');
+  setTimeout(() => w.remove(), 220);
+  if (!sheets.length) document.body.classList.remove('noscroll');
+  if (w._onClose) w._onClose();
+}
+function closeAllSheets() { while (sheets.length) closeSheet(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheets.length) closeSheet(); });
+
+const sheetHead = (titel, sub, extra = '') => `<div class="sheet-head"><div class="sh-row"><div class="sh-titles"><h2>${titel}</h2>${sub ? `<p class="sh-sub">${sub}</p>` : ''}</div>${extra}<button class="icon-btn" data-act="sluit" aria-label="Sluiten">${ICON.sluit}</button></div></div>`;
+
+function vraag({ titel, tekst, ok = 'Ja', annuleer = 'Annuleren', gevaar = false }) {
+  return new Promise(res => {
+    let klaar = false;
+    const done = v => { if (!klaar) { klaar = true; res(v); } };
+    const sh = openSheet(`${sheetHead(esc(titel), '')}<div class="sheet-body"><p class="lead">${esc(tekst)}</p><div class="stack"><button class="btn ${gevaar ? 'btn-danger' : 'btn-primary'} btn-lg" data-act="ok">${esc(ok)}</button><button class="btn btn-soft btn-lg" data-act="nee">${esc(annuleer)}</button></div></div>`, { cls: 'sheet-small', onClose: () => done(false) });
+    sh.addEventListener('click', e => {
+      const a = e.target.closest('[data-act]'); if (!a) return;
+      if (a.dataset.act === 'ok') { done(true); closeSheet(); }
+      else { done(false); closeSheet(); }
+    });
+  });
+}
+
+// ===== Lijsten =====
+function recentProducts(max) {
+  const seen = new Set(), out = [];
+  const log = [...S.log].sort((a, b) => b.ts - a.ts);
+  for (const e of log) {
+    if (seen.has(e.pid)) continue; seen.add(e.pid);
+    const p = P(e.pid); if (p) out.push(p);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+const byUsage = (a, b) => (usage()[b.id] || 0) - (usage()[a.id] || 0) || a.naam.localeCompare(b.naam, 'nl');
+function searchProducts(q) {
+  const words = norm(q).split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  return S.products.filter(p => { const h = norm(p.naam + ' ' + p.cat); return words.every(w => h.includes(w)); })
+    .sort((a, b) => (norm(b.naam).startsWith(words[0]) - norm(a.naam).startsWith(words[0])) || byUsage(a, b)).slice(0, 60);
+}
+function prodRow(p, act = 'kies') {
+  const lp = lastPortion(p), por = p.porties[lp.pi] || p.porties[0];
+  if (!por) return '';
+  const pts = entryPoints(p, por, lp.qty), kcal = nutr(p, por.g).kcal * lp.qty;
+  const hoeveel = (lp.qty !== 1 ? fmtQty(lp.qty) + ' × ' : '') + por.label;
+  return `<button class="row" data-act="${act}" data-id="${p.id}"><span class="row-main"><span class="row-name">${esc(p.naam)}${p.fav ? ' <span class="fav" aria-label="favoriet">★</span>' : ''}</span><span class="row-sub">${esc(hoeveel)} · ${nf0.format(kcal)} kcal${p.regel === 'vet' ? ' · vetregel' : ''}</span></span>${badge(pts, p.zero)}</button>`;
+}
+function mealPoints(m) {
+  let pts = 0, kcal = 0; const namen = [];
+  for (const it of m.items) {
+    const p = P(it.pid); if (!p) continue;
+    const por = p.porties[it.pi] || p.porties[0];
+    pts += entryPoints(p, por, it.qty); kcal += nutr(p, por.g).kcal * it.qty; namen.push(p.naam);
+  }
+  return { pts, kcal, namen };
+}
+function mealCard(m) {
+  const r = mealPoints(m);
+  return `<div class="mealcard"><div class="mc-top"><span class="row-main"><span class="row-name">${esc(m.naam)}</span><span class="row-sub">${esc(r.namen.join(', ') || 'Geen producten meer')} · ${nf0.format(r.kcal)} kcal</span></span>${badge(r.pts, false)}</div><div class="mc-actions"><button class="btn btn-primary btn-sm" data-act="maaltijd-add" data-id="${m.id}">Toevoegen</button><button class="btn btn-ghost btn-sm" data-act="maaltijd-edit" data-id="${m.id}">Aanpassen</button></div></div>`;
+}
+
+// ===== Weergaven =====
+const app = () => $('#app');
+function render() {
+  const t = $('#topbar'), v = $('#view');
+  if (S.view === 'week') renderWeek(t, v);
+  else if (S.view === 'producten') renderProducten(t, v);
+  else if (S.view === 'instellingen') renderInstellingen(t, v);
+  else renderVandaag(t, v);
+  for (const b of document.querySelectorAll('.tabbar [data-tab]')) b.setAttribute('aria-current', b.dataset.tab === S.view ? 'page' : 'false');
+}
+
+function banners() {
+  const s = S.settings, out = [];
+  if (BUILD === 'artifact' && !s.testMeldingWeg) out.push(`<div class="notice"><p><b>Testversie.</b> Wat je hier invoert, blijft alleen in deze browser en kan verloren gaan. Voor dagelijks gebruik installeer je de app op je iPhone.</p><button class="btn btn-soft btn-sm" data-act="test-weg">Begrepen</button></div>`);
+  if (!S.storageOK) out.push(`<div class="notice notice-warn"><p>Je gegevens kunnen in deze weergave niet bewaard worden. Wat je invoert, verdwijnt als je de app sluit.</p></div>`);
+  if (!s.budgetIngesteld) out.push(`<div class="notice"><p>Stel eerst je puntenbudget in. Tot dan reken ik met 30 dagpunten en 28 punten weekreserve.</p><button class="btn btn-primary btn-sm" data-act="naar-budget">Budget instellen</button></div>`);
+  if (BUILD === 'pwa' && S.storageOK && new Set(S.log.map(e => e.date)).size >= 3) {
+    const d = s.lastBackup ? daysBetween(s.lastBackup, todayKey()) : null;
+    if (d === null || d >= 7) out.push(`<div class="notice"><p>${d === null ? 'Je hebt nog geen back-up gemaakt.' : `Je laatste back-up is van ${d} dagen geleden.`} Een back-upbestand beschermt je dagboek als er iets met je telefoon gebeurt.</p><button class="btn btn-soft btn-sm" data-act="backup-nu">Back-up maken</button></div>`);
+  }
+  return out.join('');
+}
+
+function entryRow(e) {
+  const kcal = (e.unitN && e.unitN.kcal || 0) * e.qty;
+  return `<button class="row" data-act="entry" data-id="${e.id}"><span class="row-main"><span class="row-name">${esc(e.naam)}</span><span class="row-sub">${e.qty !== 1 ? fmtQty(e.qty) + ' × ' : ''}${esc(e.portie)} · ${nf0.format(kcal)} kcal</span></span>${badge(e.punten, e.zero)}</button>`;
+}
+
+function nutriGrid(st, deel = 1) {
+  const f = x => nf0.format(x / deel);
+  return `<div class="nutri-grid tnum"><div class="nutri-kcal"><span class="nv-big">${f(st.kcal)}</span><span class="nl">kcal</span></div><div class="nutri-macros"><div><span class="nv">${f(st.eiwit)} g</span><span class="nl">eiwit</span></div><div><span class="nv">${f(st.kh)} g</span><span class="nl">koolhydraten</span></div><div><span class="nv">${f(st.vet)} g</span><span class="nl">vet</span></div><div><span class="nv">${f(st.vezels)} g</span><span class="nl">vezels</span></div></div></div>
+  <p class="nutri-note tnum">Waarvan ${f(st.zeroKcal)} kcal uit ZeroPoints-producten. Fruit: ${fmtQty(Math.round(st.fruitPorties / deel * 2) / 2)} ${Math.round(st.fruitPorties / deel * 2) / 2 === 1 ? 'portie' : 'porties'}, ongeveer ${f(st.fruitKcal)} kcal.</p>`;
+}
+
+function renderVandaag(top, view) {
+  const k = S.day, t = todayKey(), B = S.settings.dagBudget, st = dayStats(k), wi = weekInfo(weekStartKey(k));
+  const rest = B - st.punten, overDag = Math.max(0, -rest);
+  const eyebrow = k === t ? '<span class="eyebrow">Vandaag</span>' : `<button class="eyebrow eyebrow-link" data-act="dag-vandaag">${k === addDays(t, -1) ? 'Gisteren' : k === addDays(t, 1) ? 'Morgen' : 'Andere dag'} · naar vandaag</button>`;
+  top.innerHTML = `<div class="tb"><button class="icon-btn" data-act="dag" data-d="-1" aria-label="Vorige dag">${ICON.links}</button><div class="tb-mid">${eyebrow}<h1 class="tb-title">${fmtDate(k)}</h1></div><button class="icon-btn" data-act="dag" data-d="1" aria-label="Volgende dag">${ICON.rechts}</button></div>`;
+  const pct = B > 0 ? Math.min(100, st.punten / B * 100) : 100;
+  let h = `<section class="sum" aria-label="Punten">
+    <div class="sum-top">
+      <div class="sum-day"><div class="big tnum">${Math.max(0, rest)}</div><div class="big-label">${rest >= 0 ? 'dagpunten over' : 'dagpunten op'}</div></div>
+      <div class="sum-week"><div class="mid tnum">${Math.max(0, wi.rest)}</div><div class="big-label">weekreserve over</div></div>
+    </div>
+    <div class="bar${overDag ? ' bar-over' : ''}" role="img" aria-label="${st.punten} van ${B} dagpunten gebruikt"><span style="width:${pct}%"></span></div>
+    <p class="sum-line tnum">${st.punten} van ${B} dagpunten gebruikt${overDag ? ` · ${overDag} uit je weekreserve` : ''}</p>
+    <p class="sum-line muted tnum">Weekreserve ${wi.reserve}${wi.bonus ? ` + ${wi.bonus} door beweging` : ''}${wi.over ? `, ${wi.over} gebruikt` : ''}${wi.rest < 0 ? `. Deze week ${-wi.rest} boven je reserve.` : ''}</p>
+  </section>
+  <div class="actions">
+    <button class="btn btn-primary btn-lg" data-act="toevoegen">${ICON.plus}<span>Eten toevoegen</span></button>
+    <button class="btn btn-soft btn-lg" data-act="beweging">${ICON.fiets}<span>Beweging</span></button>
+  </div>
+  <button class="btn-craving" data-act="eetdrang"><span class="craving-t">Ik heb eetdrang</span><span class="craving-s">Wat kan ik eten?</span>${ICON.rechts}</button>
+  ${banners()}`;
+  for (const [m, label] of MOMENTEN) {
+    const es = S.log.filter(e => e.date === k && e.moment === m).sort((a, b) => a.ts - b.ts);
+    const som = es.reduce((s, e) => s + e.punten, 0);
+    h += `<section class="meal"><div class="meal-head"><h2>${label}</h2><span class="meal-pts tnum">${es.length ? som + ' p' : ''}</span><button class="icon-btn icon-btn-soft" data-act="toevoegen" data-moment="${m}" aria-label="Toevoegen aan ${label.toLowerCase()}">${ICON.plus}</button></div>
+    ${es.length ? `<div class="list">${es.map(entryRow).join('')}</div><button class="link" data-act="bewaar-maaltijd" data-moment="${m}">Bewaar als vaste maaltijd</button>` : ''}</section>`;
+  }
+  h += `<details class="nutri"${S.settings.toonVoeding ? ' open' : ''}><summary>Voedingswaarden ${k === t ? 'vandaag' : 'deze dag'}</summary>${nutriGrid(st)}<p class="nutri-note muted">Schattingen op basis van gemiddelde waarden per portie.</p></details>`;
+  view.innerHTML = h;
+}
+
+function renderWeek(top, view) {
+  const wk = S.week, wi = weekInfo(wk), t = todayKey(), B = S.settings.dagBudget, isNu = wk === weekStartKey(t);
+  const eyebrow = isNu ? '<span class="eyebrow">Deze week</span>' : '<button class="eyebrow eyebrow-link" data-act="week-nu">Naar deze week</button>';
+  top.innerHTML = `<div class="tb"><button class="icon-btn" data-act="week" data-d="-1" aria-label="Vorige week">${ICON.links}</button><div class="tb-mid">${eyebrow}<h1 class="tb-title">${fmtShort(wk)} tot ${fmtShort(addDays(wk, 6))}</h1></div><button class="icon-btn" data-act="week" data-d="1" aria-label="Volgende week">${ICON.rechts}</button></div>`;
+  let h = `<section class="card ledger tnum"><h2 class="card-title">Weekreserve</h2>
+    <div class="lr"><span>Startreserve</span><span>${wi.reserve}</span></div>
+    <div class="lr"><span>Verdiend met beweging</span><span>+ ${wi.bonus}</span></div>
+    <div class="lr"><span>Gebruikt boven je dagbudget</span><span>− ${wi.over}</span></div>
+    <div class="lr lr-total"><span>Over</span><span>${wi.rest}</span></div></section>`;
+  h += `<section class="card"><h2 class="card-title">Punten per dag</h2><div class="days">${wi.days.map(d => {
+    const dd = fromKey(d.k), pct = B > 0 ? Math.min(100, d.st.punten / B * 100) : 0;
+    return `<button class="dayrow${d.k === t ? ' is-today' : ''}" data-act="open-dag" data-k="${d.k}"><span class="dl">${DAGEN_KORT[dd.getDay()]} ${dd.getDate()}</span><span class="bar bar-sm${d.o ? ' bar-over' : ''}"><span style="width:${pct}%"></span></span><span class="dn tnum${d.st.n ? '' : ' muted'}">${d.st.punten}<small>/${B}</small></span></button>`;
+  }).join('')}</div><p class="hint">Je dagbudget is ${B}. Wat erboven gaat, komt uit je weekreserve.</p></section>`;
+  const gevuld = wi.days.filter(d => d.st.n > 0);
+  if (gevuld.length) {
+    const som = { kcal: 0, eiwit: 0, kh: 0, vet: 0, vezels: 0, zeroKcal: 0, fruitKcal: 0, fruitPorties: 0 };
+    for (const d of gevuld) for (const x in som) som[x] += d.st[x];
+    h += `<section class="card"><h2 class="card-title">Gemiddeld per dag</h2><p class="hint">Over ${gevuld.length} ${gevuld.length === 1 ? 'dag' : 'dagen'} met registraties.</p>${nutriGrid(som, gevuld.length)}</section>`;
+  }
+  h += `<section class="card"><div class="card-head"><h2 class="card-title">Beweging</h2><button class="btn btn-soft btn-sm" data-act="beweging">Noteren</button></div>
+    ${wi.acts.length ? `<div class="list">${wi.acts.sort((a, b) => a.date.localeCompare(b.date) || a.ts - b.ts).map(a => `<div class="row row-static"><span class="row-main"><span class="row-name">${esc(a.naam)}</span><span class="row-sub">${fmtDate(a.date)} · ${a.minuten} min</span></span><span class="pts pts-bonus tnum">+${a.punten}</span><button class="icon-btn" data-act="act-del" data-id="${a.id}" aria-label="Verwijder ${esc(a.naam)}">${ICON.prul}</button></div>`).join('')}</div>` : '<p class="empty">Nog geen beweging genoteerd deze week.</p>'}</section>`;
+  view.innerHTML = h;
+}
+
+function renderProducten(top, view) {
+  top.innerHTML = `<div class="tb"><div class="tb-mid tb-left"><span class="eyebrow">${S.products.length} producten</span><h1 class="tb-title">Producten</h1></div><button class="btn btn-primary btn-sm" data-act="prod-nieuw">${ICON.plus}<span>Nieuw</span></button></div>`;
+  const cats = CATS.filter(c => S.products.some(p => p.cat === c));
+  const chip = (id, l) => `<button class="chip" data-act="prod-cat" data-cat="${esc(id)}" aria-pressed="${S.prodCat === id}">${esc(l)}</button>`;
+  view.innerHTML = `<input id="prod-zoek" class="search" type="search" placeholder="Zoek een product" autocomplete="off" aria-label="Zoek een product" value="${esc(S.prodQ)}">
+    <div class="chips chips-scroll">${chip('alle', 'Alle')}${chip('fav', 'Favorieten')}${chip('zero', 'ZeroPoints')}${cats.map(c => chip(c, c)).join('')}</div>
+    <p class="hint">Tik op een product om porties, punten of de ZeroPoints-instelling aan te passen.</p>
+    <div id="prod-list"></div>`;
+  renderProdList();
+}
+function renderProdList() {
+  const el = $('#prod-list'); if (!el) return;
+  const q = S.prodQ.trim();
+  let list = q ? searchProducts(q) : [...S.products];
+  if (S.prodCat === 'fav') list = list.filter(p => p.fav);
+  else if (S.prodCat === 'zero') list = list.filter(p => p.zero);
+  else if (S.prodCat !== 'alle') list = list.filter(p => p.cat === S.prodCat);
+  if (!list.length) { el.innerHTML = `<p class="empty">${S.prodCat === 'fav' ? 'Nog geen favorieten. Tik op de ster bij een product.' : 'Geen producten gevonden.'}</p>`; return; }
+  if (q) { el.innerHTML = `<div class="list">${list.map(p => prodRow(p, 'prod-open')).join('')}</div>`; return; }
+  let h = '';
+  for (const c of CATS) {
+    const g = list.filter(p => p.cat === c).sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+    if (g.length) h += `<h3 class="list-h">${esc(c)}</h3><div class="list">${g.map(p => prodRow(p, 'prod-open')).join('')}</div>`;
+  }
+  const rest = list.filter(p => !CATS.includes(p.cat));
+  if (rest.length) h += `<h3 class="list-h">Overige</h3><div class="list">${rest.map(p => prodRow(p, 'prod-open')).join('')}</div>`;
+  el.innerHTML = h;
+}
+
+function storageStatus() {
+  if (!S.storageOK) return 'Opslag is niet beschikbaar in deze weergave. Gegevens verdwijnen als je de app sluit.';
+  if (S.persistent === true) return 'Je gegevens staan blijvend op dit toestel.';
+  return 'Je gegevens staan op dit toestel. Het systeem kan websitegegevens in uitzonderlijke gevallen opruimen, dus maak geregeld een back-up.';
+}
+
+function renderInstellingen(top, view) {
+  const s = S.settings, pr = s.profiel, F = s.formule;
+  top.innerHTML = `<div class="tb"><div class="tb-mid tb-left"><span class="eyebrow">Jouw regels</span><h1 class="tb-title">Instellingen</h1></div></div>`;
+  const inp = (id, attr, val, label, extra = '') => `<label class="field" for="${id}"><span>${label}</span><input id="${id}" ${attr} inputmode="decimal" value="${esc(val)}" ${extra}></label>`;
+  const gem = gemetenZeroKcal();
+  view.innerHTML = `
+  <section class="card" id="sec-budget"><h2 class="card-title">Puntenbudget</h2>
+    <div class="grid2">${inp('set-dag', 'data-set="dagBudget"', s.dagBudget, 'Dagpunten')}${inp('set-week', 'data-set="weekReserve"', s.weekReserve, 'Weekreserve')}</div>
+    <p class="hint">Bewegingspunten komen bovenop je weekreserve en starten elke maandag opnieuw op nul. Ongebruikte dagpunten schuiven niet door.</p>
+  </section>
+  <section class="card" id="sec-voorstel"><h2 class="card-title">Budget berekenen</h2>
+    <p class="hint">Op basis van je energieverbruik, een gematigd tekort en wat je gemiddeld uit ZeroPoints eet. Deze gegevens blijven op dit toestel.</p>
+    <div class="seg" role="group" aria-label="Geslacht"><button data-act="geslacht" data-v="man" aria-pressed="${pr.geslacht === 'man'}">Man</button><button data-act="geslacht" data-v="vrouw" aria-pressed="${pr.geslacht === 'vrouw'}">Vrouw</button></div>
+    <div class="grid2">${inp('pr-leeftijd', 'data-prof="leeftijd"', pr.leeftijd, 'Leeftijd')}${inp('pr-lengte', 'data-prof="lengte"', pr.lengte, 'Lengte (cm)')}${inp('pr-gewicht', 'data-prof="gewicht"', pr.gewicht, 'Gewicht (kg)')}${inp('pr-streef', 'data-prof="streefgewicht"', pr.streefgewicht, 'Streefgewicht (kg)')}</div>
+    <label class="field" for="pr-act"><span>Hoe actief ben je overdag?</span><select id="pr-act" data-prof="activiteit">${ACTNIVEAUS.map(([v, l]) => `<option value="${v}"${num(pr.activiteit) === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+    <div class="grid2">${inp('pr-tekort', 'data-prof="tekort"', pr.tekort, 'Tekort (kcal per dag)')}${inp('pr-zero', 'data-prof="zeroKcal"', pr.zeroKcal, 'Kcal uit ZeroPoints per dag')}</div>
+    ${gem && gem.n >= 5 ? `<p class="hint">In je dagboek kwam de voorbije ${gem.n} dagen gemiddeld ${nf0.format(gem.gem)} kcal per dag uit ZeroPoints-producten. <button class="link link-inline" data-act="gebruik-gemeten" data-v="${Math.round(gem.gem)}">Gebruik deze waarde</button></p>` : '<p class="hint">Na een week noteren toont de app hier hoeveel kcal je echt uit ZeroPoints-producten haalt.</p>'}
+    ${inp('pr-res', 'data-prof="reservePerDag"', pr.reservePerDag, 'Punten per dag naar je weekreserve')}
+    <div id="voorstel-uit"></div>
+  </section>
+  <section class="card"><h2 class="card-title">Puntenformule</h2>
+    <p class="formula tnum" id="formule-tekst"></p>
+    <div class="grid3">${inp('f-kcal', 'data-form="kcal"', F.kcal, 'kcal per punt')}${inp('f-eiwit', 'data-form="eiwit"', F.eiwit, 'g eiwit per punt korting')}${inp('f-vezels', 'data-form="vezels"', F.vezels, 'g vezels per punt korting')}</div>
+    ${inp('f-vet', 'data-set="vetPerKl"', s.vetPerKl, 'Bereidingsvet: punten per koffielepel')}
+    <p class="hint">Volgorde: eerst ZeroPoints, dan de vetregel, dan vaste punten, anders deze formule. Een aanpassing geldt voor wat je vanaf nu noteert; je dagboek van vroeger blijft zoals het was.</p>
+    <button class="link" data-act="formule-standaard">Standaardwaarden terugzetten</button>
+  </section>
+  <section class="card"><h2 class="card-title">Bewegingspunten</h2>
+    <div class="act-types">${s.activiteiten.map((a, i) => `<div class="act-type"><input id="at-n-${i}" aria-label="Activiteit" data-acti="${i}" data-f="naam" value="${esc(a.naam)}"><label class="mini"><input id="at-m-${i}" aria-label="Minuten" inputmode="numeric" data-acti="${i}" data-f="min" value="${a.min}"><span>min</span></label><label class="mini"><span>+</span><input id="at-p-${i}" aria-label="Bonuspunten" inputmode="numeric" data-acti="${i}" data-f="punten" value="${a.punten}"></label><button class="icon-btn" data-act="at-weg" data-i="${i}" aria-label="Verwijder ${esc(a.naam)}">${ICON.prul}</button></div>`).join('')}</div>
+    <button class="btn btn-soft btn-sm" data-act="at-nieuw">${ICON.plus}<span>Activiteit toevoegen</span></button>
+    <p class="hint">Een aanmoediging, geen berekening van verbrande calorieën.</p>
+  </section>
+  <section class="card"><h2 class="card-title">Weergave</h2>
+    <label class="switch-row" for="set-toon"><span>Voedingswaarden standaard openklappen</span><input type="checkbox" class="switch" id="set-toon" data-set="toonVoeding"${s.toonVoeding ? ' checked' : ''}></label>
+  </section>
+  <section class="card" id="sec-data"><h2 class="card-title">Gegevens en back-up</h2>
+    <p>${storageStatus()}</p>
+    <p class="hint">${s.lastBackup ? `Laatste back-up: ${fmtDate(s.lastBackup)}.` : 'Nog geen back-up gemaakt.'} ${S.log.length} registraties, ${S.products.length} producten, ${S.meals.length} vaste maaltijden.</p>
+    <div class="stack">
+      ${BUILD === 'pwa' ? '<button class="btn btn-primary" data-act="backup-bestand">Back-up bewaren als bestand</button>' : ''}
+      <button class="btn btn-soft" data-act="backup-tekst">Back-up kopiëren als tekst</button>
+      <button class="btn btn-soft" data-act="backup-terug">Back-up terugzetten</button>
+    </div>
+  </section>
+  <section class="card about"><h2 class="card-title">Over deze app</h2>
+    <p>De punten zijn jouw eigen regels, geen algemeen voedingsadvies. Calorieën en voedingswaarden zijn gemiddelden per standaardportie, zonder merkverschillen.</p>
+    <p class="hint">Versie ${APP_VERSION}${BUILD === 'artifact' ? ' (testversie)' : ''}</p>
+  </section>`;
+  updateFormuleTekst(); updateVoorstel();
+}
+function updateFormuleTekst() {
+  const el = $('#formule-tekst'); if (!el) return;
+  const F = S.settings.formule;
+  el.innerHTML = `punten = kcal ÷ <b>${nf1.format(F.kcal)}</b> − eiwit ÷ <b>${nf1.format(F.eiwit)}</b> − vezels ÷ <b>${nf1.format(F.vezels)}</b>`;
+}
+// Alleen vervangen als de inhoud echt verandert: anders verdwijnt een knop net terwijl je erop tikt.
+function setHtml(el, html) { if (el._html !== html) { el._html = html; el.innerHTML = html; } }
+function updateVoorstel() {
+  const out = $('#voorstel-uit'); if (!out) return;
+  const v = budgetVoorstel(S.settings.profiel);
+  if (!v) { setHtml(out, '<p class="hint">Kies man of vrouw en vul leeftijd, lengte en gewicht in om het voorstel te zien.</p>'); return; }
+  const pr = S.settings.profiel, act = (ACTNIVEAUS.find(a => a[0] === num(pr.activiteit)) || [1.375])[0];
+  setHtml(out, `<div class="calc tnum">
+    <div class="lr"><span>Rustverbruik</span><span>${nf0.format(v.bmr)} kcal</span></div>
+    <div class="lr"><span>Dagverbruik (× ${new Intl.NumberFormat('nl-BE', { maximumFractionDigits: 3 }).format(act)})</span><span>${nf0.format(v.tdee)} kcal</span></div>
+    <div class="lr"><span>Doel (− ${nf0.format(num(pr.tekort) || 0)} kcal)</span><span>${nf0.format(v.doel)} kcal</span></div>
+    <div class="lr"><span>Voor punten (− ${nf0.format(v.zk)} kcal ZeroPoints)</span><span>${nf0.format(v.puntenKcal)} kcal</span></div>
+    <div class="lr"><span>Punten per dag (÷ ${nf1.format(S.settings.formule.kcal)})</span><span>${v.perDag}</span></div>
+    <div class="lr lr-total"><span>Voorstel</span><span>${v.dag} per dag + ${v.week} weekreserve</span></div>
+  </div>
+  ${v.begrensd ? `<p class="hint">Het doel is begrensd op ${v.minimum} kcal per dag, zodat het haalbaar blijft.</p>` : ''}
+  <button class="btn btn-primary btn-block" data-act="voorstel-gebruik" data-dag="${v.dag}" data-week="${v.week}">Gebruik dit voorstel</button>
+  <p class="hint">Een startpunt. Na drie à vier weken kun je bijsturen op basis van je gewichtstrend.</p>`);
+}
+
+// ===== Toevoegen =====
+function openToevoegen(moment, date) {
+  date = date || S.day;
+  const st = { moment: moment || (date === todayKey() ? momentNu() : 'middag'), tab: S.log.length ? 'recent' : 'alles', q: '', cat: '', added: 0 };
+  const sh = openSheet(`<div class="sheet-head">
+      <div class="sh-row"><div class="sh-titles"><h2>Toevoegen</h2>${date !== todayKey() ? `<p class="sh-sub">${fmtDate(date)}</p>` : ''}</div><button class="btn btn-soft btn-sm" data-act="klaar">Klaar</button></div>
+      <div class="seg seg-4" role="group" aria-label="Moment" data-slot="mom"></div>
+      <input id="zoek-add" class="search" type="search" placeholder="Zoek een product of maaltijd" autocomplete="off" enterkeyhint="search" aria-label="Zoek een product of maaltijd">
+    </div><div class="sheet-body" data-slot="body"></div>`, { cls: 'sheet-tall', onClose: () => render() });
+  const mom = $('[data-slot=mom]', sh), body = $('[data-slot=body]', sh), klaar = $('[data-act=klaar]', sh);
+  const ctx = {
+    get moment() { return st.moment; }, date,
+    onAdded: () => { st.added++; klaar.textContent = `Klaar (${st.added})`; if (!st.q && st.tab === 'recent') drawBody(); }
+  };
+  const drawMom = () => { mom.innerHTML = MOMENTEN.map(([m, l]) => `<button data-act="mom" data-m="${m}" aria-pressed="${m === st.moment}">${l}</button>`).join(''); };
+  const nieuwKnop = q => `<button class="btn btn-soft btn-block" data-act="nieuw">${ICON.plus}<span>${q ? `"${esc(q)}" als nieuw product` : 'Nieuw product'}</span></button>`;
+  const drawBody = () => {
+    const q = st.q.trim();
+    let h = '';
+    if (!q) {
+      const av = P('avocado');
+      h += `<div class="quick"><button class="quick-btn" data-act="vet"><span class="qb-t">Bereidingsvet</span><span class="qb-s">${S.settings.vetPerKl} p per koffielepel</span></button>${av ? `<button class="quick-btn" data-act="avocado"><span class="qb-t">Avocado</span><span class="qb-s">¼ · ½ · hele</span></button>` : ''}</div>`;
+      h += `<div class="tabs" role="tablist">${[['recent', 'Recent'], ['fav', 'Favorieten'], ['vast', 'Maaltijden'], ['alles', 'Alles']].map(([t, l]) => `<button role="tab" data-act="tab" data-tab="${t}" aria-selected="${st.tab === t}">${l}</button>`).join('')}</div>`;
+      if (st.tab === 'recent') {
+        const list = recentProducts(30);
+        h += list.length ? `<div class="list">${list.map(p => prodRow(p)).join('')}</div>` : '<p class="empty">Wat je noteert, verschijnt hier, zodat je het de volgende keer meteen terugvindt.</p>';
+      } else if (st.tab === 'fav') {
+        const list = S.products.filter(p => p.fav).sort(byUsage);
+        h += list.length ? `<div class="list">${list.map(p => prodRow(p)).join('')}</div>` : '<p class="empty">Tik bij een product op de ster om het hier te bewaren.</p>';
+      } else if (st.tab === 'vast') {
+        h += S.meals.length ? `<div class="meals">${S.meals.map(mealCard).join('')}</div>` : '<p class="empty">Noteer bijvoorbeeld je ontbijt en tik op het dagscherm op "Bewaar als vaste maaltijd". Daarna voeg je het hier met één tik toe.</p>';
+      } else {
+        const cats = CATS.filter(c => S.products.some(p => p.cat === c));
+        h += `<div class="chips chips-scroll">${cats.map(c => `<button class="chip" data-act="cat" data-cat="${esc(c)}" aria-pressed="${st.cat === c}">${esc(c)}</button>`).join('')}</div>`;
+        for (const c of cats) {
+          if (st.cat && st.cat !== c) continue;
+          const g = S.products.filter(p => p.cat === c).sort(byUsage);
+          h += `<h3 class="list-h">${esc(c)}</h3><div class="list">${g.map(p => prodRow(p)).join('')}</div>`;
+        }
+        h += nieuwKnop('');
+      }
+    } else {
+      const nq = norm(q);
+      const meals = S.meals.filter(m => norm(m.naam).includes(nq));
+      const prods = searchProducts(q);
+      if (meals.length) h += `<h3 class="list-h">Vaste maaltijden</h3><div class="meals">${meals.map(mealCard).join('')}</div>`;
+      h += prods.length ? `<div class="list">${prods.map(p => prodRow(p)).join('')}</div>` : `<p class="empty">Geen product gevonden voor "${esc(q)}".</p>`;
+      h += nieuwKnop(q);
+    }
+    body.innerHTML = h;
+  };
+  drawMom(); drawBody();
+  $('#zoek-add', sh).addEventListener('input', e => { st.q = e.target.value; drawBody(); });
+  sh.addEventListener('click', async e => {
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    const act = a.dataset.act;
+    if (act === 'klaar' || act === 'sluit') closeSheet();
+    else if (act === 'mom') { st.moment = a.dataset.m; drawMom(); }
+    else if (act === 'tab') { st.tab = a.dataset.tab; drawBody(); body.scrollTop = 0; }
+    else if (act === 'cat') { st.cat = st.cat === a.dataset.cat ? '' : a.dataset.cat; drawBody(); }
+    else if (act === 'kies') { const p = P(a.dataset.id); if (p) openPortie(p, ctx); }
+    else if (act === 'vet') openVet(ctx);
+    else if (act === 'avocado') openAvocado(ctx);
+    else if (act === 'maaltijd-add') await addMaaltijd(a.dataset.id, ctx);
+    else if (act === 'maaltijd-edit') openMaaltijdEdit(a.dataset.id, drawBody);
+    else if (act === 'nieuw') openProductEditor(null, { naam: st.q.trim(), onSaved: p => { drawBody(); openPortie(p, ctx); } });
+  });
+}
+
+function openPortie(p, ctx) {
+  const lp = lastPortion(p), st = { pi: lp.pi, qty: lp.qty };
+  const sh = openSheet(`${sheetHead(esc(p.naam), `${esc(p.cat)} ${regelBadge(p)}`)}<div class="sheet-body" data-slot="b"></div>`);
+  const b = $('[data-slot=b]', sh);
+  const draw = () => {
+    const por = p.porties[st.pi] || p.porties[0], pts = entryPoints(p, por, st.qty), n = nutr(p, por.g), q = st.qty;
+    b.innerHTML = `<h3 class="lbl">Portie</h3>
+      <div class="chips">${p.porties.map((x, i) => `<button class="chip chip-lg" data-act="pi" data-i="${i}" aria-pressed="${i === st.pi}"><span>${esc(x.label)}</span><small class="tnum">${nf1.format(num(x.g) || 0)} ${eenheid(p)} · ${portionPoints(p, x)} p</small></button>`).join('')}</div>
+      <h3 class="lbl">Hoeveel</h3>
+      <div class="qty"><button class="icon-btn icon-btn-soft" data-act="qmin" aria-label="Minder">−</button><output class="qty-v tnum">${fmtQty(q)}</output><button class="icon-btn icon-btn-soft" data-act="qplus" aria-label="Meer">+</button></div>
+      <div class="chips">${[0.5, 1, 1.5, 2, 3].map(x => `<button class="chip" data-act="q" data-q="${x}" aria-pressed="${x === q}">${fmtQty(x)}</button>`).join('')}</div>
+      <div class="result"><div class="result-pts"><span class="big tnum${pts === 0 ? ' is-zero' : ''}">${pts}</span><span class="big-label">${pts === 1 ? 'punt' : 'punten'}</span></div>
+      <div class="result-n tnum"><b>${nf0.format(n.kcal * q)} kcal</b><br>${nf1.format(n.eiwit * q)} g eiwit · ${nf1.format(n.kh * q)} g koolhydraten<br>${nf1.format(n.vet * q)} g vet · ${nf1.format(n.vezels * q)} g vezels</div></div>
+      <p class="hint">${esc(regelUitleg(p, por))}</p>${p.notitie ? `<p class="hint">${esc(p.notitie)}</p>` : ''}
+      <button class="btn btn-primary btn-lg btn-block" data-act="add">Toevoegen aan ${momentLabel(ctx.moment).toLowerCase()}</button>
+      <div class="row-actions"><button class="btn btn-ghost btn-sm${p.fav ? ' is-fav' : ''}" data-act="fav" aria-pressed="${!!p.fav}">${ICON.ster}<span>${p.fav ? 'Favoriet' : 'Bewaar als favoriet'}</span></button><button class="btn btn-ghost btn-sm" data-act="edit">Product aanpassen</button></div>`;
+  };
+  draw();
+  sh.addEventListener('click', async e => {
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    switch (a.dataset.act) {
+      case 'sluit': closeSheet(); break;
+      case 'pi': st.pi = +a.dataset.i; draw(); break;
+      case 'q': st.qty = +a.dataset.q; draw(); break;
+      case 'qmin': st.qty = Math.max(0.5, st.qty - 0.5); draw(); break;
+      case 'qplus': st.qty = Math.min(20, st.qty + 0.5); draw(); break;
+      case 'add': await addEntry(makeEntry(p, st.pi, st.qty, ctx.moment, ctx.date)); toast(`${p.naam} toegevoegd`); closeSheet(); if (ctx.onAdded) ctx.onAdded(); break;
+      case 'fav': p.fav = !p.fav; await bewaar('products', p); draw(); break;
+      case 'edit': openProductEditor(p, { onSaved: () => { if (st.pi >= p.porties.length) st.pi = 0; draw(); } }); break;
+    }
+  });
+}
+
+function openVet(ctx) {
+  const vets = S.products.filter(p => p.regel === 'vet');
+  if (!vets.length) { toast('Er staan geen bereidingsvetten in je productenlijst.'); return; }
+  let sel = vets.find(v => v.id === S.settings.laatsteVet) || vets[0];
+  const sh = openSheet(`${sheetHead('Bereidingsvet', `Elk vet telt hetzelfde: ${S.settings.vetPerKl} punten per koffielepel.`)}<div class="sheet-body" data-slot="b"></div>`);
+  const b = $('[data-slot=b]', sh);
+  const draw = () => {
+    b.innerHTML = `<h3 class="lbl">Welk vet?</h3><div class="chips">${vets.map(v => `<button class="chip" data-act="soort" data-id="${v.id}" aria-pressed="${v.id === sel.id}">${esc(v.naam)}</button>`).join('')}</div>
+    <h3 class="lbl">Hoeveel?</h3><div class="choices">${[1, 2, 3].map(n => `<button class="choice" data-act="kl" data-n="${n}"><span class="choice-t">${n} koffielepel${n > 1 ? 's' : ''}</span><span class="choice-p tnum">${n * S.settings.vetPerKl} p</span></button>`).join('')}</div>
+    <p class="hint">Tik op een hoeveelheid om ze meteen toe te voegen aan ${momentLabel(ctx.moment).toLowerCase()}.</p>`;
+  };
+  draw();
+  sh.addEventListener('click', async e => {
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    if (a.dataset.act === 'sluit') closeSheet();
+    else if (a.dataset.act === 'soort') { sel = P(a.dataset.id) || sel; S.settings.laatsteVet = sel.id; saveSettings(); draw(); }
+    else if (a.dataset.act === 'kl') {
+      const n = +a.dataset.n;
+      let pi = sel.porties.findIndex(x => num(x.kl) === n), qty = 1;
+      if (pi < 0) { pi = 0; qty = n / (num(sel.porties[0].kl) || 1); }
+      await addEntry(makeEntry(sel, pi, qty, ctx.moment, ctx.date));
+      S.settings.laatsteVet = sel.id; saveSettings();
+      toast(`${n} koffielepel${n > 1 ? 's' : ''} ${sel.naam.toLowerCase()} toegevoegd`);
+      closeSheet(); if (ctx.onAdded) ctx.onAdded();
+    }
+  });
+}
+
+function openAvocado(ctx) {
+  const p = P('avocado');
+  if (!p) { toast('Avocado staat niet meer in je productenlijst.'); return; }
+  const sh = openSheet(`${sheetHead('Avocado', 'Vaste punten, ongeacht de grootte.')}<div class="sheet-body"><div class="choices">${p.porties.map((x, i) => `<button class="choice" data-act="av" data-i="${i}"><span class="choice-t">${esc(x.label)}</span><span class="choice-p tnum">${portionPoints(p, x)} p</span></button>`).join('')}</div><p class="hint">Tik om meteen toe te voegen aan ${momentLabel(ctx.moment).toLowerCase()}.</p></div>`);
+  sh.addEventListener('click', async e => {
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    if (a.dataset.act === 'sluit') closeSheet();
+    else if (a.dataset.act === 'av') {
+      const i = +a.dataset.i;
+      await addEntry(makeEntry(p, i, 1, ctx.moment, ctx.date));
+      toast(`${p.porties[i].label} toegevoegd`); closeSheet(); if (ctx.onAdded) ctx.onAdded();
+    }
+  });
+}
+
+async function addMaaltijd(id, ctx) {
+  const m = S.meals.find(x => x.id === id); if (!m) return;
+  let n = 0;
+  for (const it of m.items) {
+    const p = P(it.pid); if (!p) continue;
+    const pi = p.porties[it.pi] ? it.pi : 0;
+    await addEntry(makeEntry(p, pi, it.qty, ctx.moment, ctx.date)); n++;
+  }
+  toast(n ? `${m.naam} toegevoegd (${n} ${n === 1 ? 'product' : 'producten'})` : 'Deze maaltijd bevat geen bestaande producten meer.');
+  if (n && ctx.onAdded) ctx.onAdded();
+}
+
+function openMaaltijdEdit(id, done) {
+  const m = S.meals.find(x => x.id === id); if (!m) return;
+  const d = clone(m);
+  const sh = openSheet(`${sheetHead('Vaste maaltijd aanpassen', '')}<div class="sheet-body"><label class="field" for="mt-naam"><span>Naam</span><input id="mt-naam" value="${esc(d.naam)}"></label><h3 class="lbl">Producten</h3><div data-slot="items"></div><div class="stack"><button class="btn btn-primary btn-lg" data-act="opslaan">Opslaan</button><button class="btn btn-ghost" data-act="weg-alles">Deze maaltijd verwijderen</button></div></div>`);
+  const items = $('[data-slot=items]', sh);
+  const draw = () => {
+    items.innerHTML = d.items.length ? `<div class="list">${d.items.map((it, i) => { const p = P(it.pid); return `<div class="row row-static"><span class="row-main"><span class="row-name">${esc(p ? p.naam : it.naam)}</span><span class="row-sub">${it.qty !== 1 ? fmtQty(it.qty) + ' × ' : ''}${esc(p && p.porties[it.pi] ? p.porties[it.pi].label : it.portie)}${p ? '' : ' · product bestaat niet meer'}</span></span><button class="icon-btn" data-act="weg" data-i="${i}" aria-label="Verwijder uit maaltijd">${ICON.prul}</button></div>`; }).join('')}</div>` : '<p class="empty">Geen producten meer in deze maaltijd.</p>';
+  };
+  draw();
+  sh.addEventListener('click', async e => {
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    const act = a.dataset.act;
+    if (act === 'sluit') closeSheet();
+    else if (act === 'weg') { d.items.splice(+a.dataset.i, 1); draw(); }
+    else if (act === 'opslaan') {
+      d.naam = $('#mt-naam', sh).value.trim() || m.naam;
+      Object.assign(m, d); await bewaar('meals', m); toast('Maaltijd bewaard'); closeSheet(); if (done) done();
+    } else if (act === 'weg-alles') {
+      if (await vraag({ titel: 'Maaltijd verwijderen?', tekst: `"${m.naam}" verdwijnt uit je vaste maaltijden. Je dagboek blijft zoals het is.`, ok: 'Verwijderen', gevaar: true })) {
+        S.meals = S.meals.filter(x => x.id !== id); await verwijder('meals', id); toast('Maaltijd verwijderd'); closeSheet(); if (done) done();
+      }
+    }
+  });
+}
+
+function openBewaarMaaltijd(moment) {
+  const es = S.log.filter(e => e.date === S.day && e.moment === moment).sort((a, b) => a.ts - b.ts);
+  if (!es.length) return;
+  const def = `Mijn ${momentLabel(moment).toLowerCase()}`;
+  const sh = openSheet(`${sheetHead('Bewaar als vaste maaltijd', 'Daarna voeg je dit met één tik toe.')}<div class="sheet-body">
+    <label class="field" for="bm-naam"><span>Naam</span><input id="bm-naam" value="${esc(def)}"></label>
+    <div class="list">${es.map(e => `<div class="row row-static"><span class="row-main"><span class="row-name">${esc(e.naam)}</span><span class="row-sub">${e.qty !== 1 ? fmtQty(e.qty) + ' × ' : ''}${esc(e.portie)}</span></span>${badge(e.punten, e.zero)}</div>`).join('')}</div>
+    <button class="btn btn-primary btn-lg btn-block" data-act="bewaar">Bewaren</button></div>`, { cls: 'sheet-small' });
+  sh.addEventListener('click', async e => {
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    if (a.dataset.act === 'sluit') closeSheet();
+    else if (a.dataset.act === 'bewaar') {
+      const naam = $('#bm-naam', sh).value.trim() || def;
+      const m = { id: uid('m'), naam, items: es.map(x => ({ pid: x.pid, pi: x.pi || 0, qty: x.qty, naam: x.naam, portie: x.portie })) };
+      S.meals.push(m); await bewaar('meals', m);
+      toast(`"${naam}" bewaard bij je vaste maaltijden`); closeSheet();
+    }
+  });
+}
+
+function openEntry(id) {
+  const e = S.log.find(x => x.id === id); if (!e) return;
+  const st = { qty: e.qty, moment: e.moment };
+  const sh = openSheet(`${sheetHead(esc(e.naam), `${esc(e.portie)} · ${fmtDate(e.date)}`)}<div class="sheet-body" data-slot="b"></div>`, { cls: 'sheet-small' });
+  const b = $('[data-slot=b]', sh);
+  const draw = () => {
+    const pts = Math.round(e.unitPunten * st.qty), kcal = (e.unitN && e.unitN.kcal || 0) * st.qty;
+    b.innerHTML = `<h3 class="lbl">Hoeveel</h3>
+      <div class="qty"><button class="icon-btn icon-btn-soft" data-act="qmin" aria-label="Minder">−</button><output class="qty-v tnum">${fmtQty(st.qty)}</output><button class="icon-btn icon-btn-soft" data-act="qplus" aria-label="Meer">+</button><span class="qty-res tnum">${pts} p · ${nf0.format(kcal)} kcal</span></div>
+      <h3 class="lbl">Moment</h3><div class="seg seg-4">${MOMENTEN.map(([m, l]) => `<button data-act="mom" data-m="${m}" aria-pressed="${m === st.moment}">${l}</button>`).join('')}</div>
+      <div class="stack"><button class="btn btn-primary btn-lg" data-act="opslaan">Opslaan</button><button class="btn btn-ghost" data-act="weg">Verwijderen uit dagboek</button></div>`;
+  };
+  draw();
+  sh.addEventListener('click', async ev => {
+    const a = ev.target.closest('[data-act]'); if (!a) return;
+    switch (a.dataset.act) {
+      case 'sluit': closeSheet(); break;
+      case 'qmin': st.qty = Math.max(0.5, st.qty - 0.5); draw(); break;
+      case 'qplus': st.qty = Math.min(20, st.qty + 0.5); draw(); break;
+      case 'mom': st.moment = a.dataset.m; draw(); break;
+      case 'opslaan':
+        e.qty = st.qty; e.moment = st.moment; e.punten = Math.round(e.unitPunten * e.qty);
+        await bewaar('log', e); closeSheet(); render(); break;
+      case 'weg':
+        S.log = S.log.filter(x => x.id !== e.id); S._usage = null; await verwijder('log', e.id); closeSheet(); render();
+        toast(`${e.naam} verwijderd`, { actie: 'Ongedaan maken', fn: async () => { S.log.push(e); S._usage = null; await bewaar('log', e); render(); } });
+        break;
+    }
+  });
+}
+
+// ===== Eetdrang =====
+function ideeInfo(idee) {
+  let pts = 0, kcal = 0; const namen = [];
+  for (const [pid, pi, q] of idee.items) {
+    const p = P(pid); if (!p) return null;
+    const por = p.porties[pi] || p.porties[0];
+    pts += entryPoints(p, por, q); kcal += nutr(p, por.g).kcal * q; namen.push(p.naam);
+  }
+  return { pts, kcal, namen };
+}
+function openEetdrang() {
+  const st = { tag: null };
+  const ctx = { moment: 'tussendoor', date: S.day, onAdded: () => draw() };
+  const sh = openSheet(`${sheetHead('Ik heb eetdrang', 'Waar heb je zin in?')}<div class="sheet-body" data-slot="b"></div>`, { cls: 'sheet-tall', onClose: () => render() });
+  const b = $('[data-slot=b]', sh);
+  const draw = () => {
+    let h = `<div class="cravings">${TAGS.map(([t, l]) => `<button class="crave" data-act="tag" data-tag="${t}" aria-pressed="${st.tag === t}">${l}</button>`).join('')}</div>`;
+    if (st.tag) {
+      const B = S.settings.dagBudget, ds = dayStats(S.day), wi = weekInfo(weekStartKey(S.day));
+      h += `<p class="hint tnum">Je hebt nog ${Math.max(0, B - ds.punten)} dagpunten en ${Math.max(0, wi.rest)} punten weekreserve.</p>`;
+      const ideeen = IDEEEN.filter(i => i.tags.split(' ').includes(st.tag)).map(i => ({ i, r: ideeInfo(i) })).filter(x => x.r).sort((a, b) => a.r.pts - b.r.pts);
+      if (ideeen.length) h += `<h3 class="list-h">Snelle ideeën</h3><div class="ideas">${ideeen.map(({ i, r }) => `<div class="idea"><div class="idea-top"><h4>${esc(i.naam)}</h4>${badge(r.pts, r.pts === 0)}</div><p>${esc(i.uitleg)}</p><p class="row-sub tnum">${esc(r.namen.join(', '))} · ongeveer ${nf0.format(r.kcal)} kcal</p><button class="btn btn-soft btn-sm" data-act="idee" data-id="${i.id}">${ICON.plus}<span>Toevoegen</span></button></div>`).join('')}</div>`;
+      const prods = S.products.filter(p => (p.tags || []).includes(st.tag)).map(p => { const lp = lastPortion(p); return { p, pts: entryPoints(p, p.porties[lp.pi] || p.porties[0], lp.qty) }; })
+        .sort((a, b) => a.pts - b.pts || (usage()[b.p.id] || 0) - (usage()[a.p.id] || 0)).slice(0, 15).map(x => x.p);
+      if (prods.length) h += `<h3 class="list-h">Uit je producten</h3><div class="list">${prods.map(p => prodRow(p)).join('')}</div>`;
+    } else {
+      h += '<p class="hint">Kies wat je nu wil. Je krijgt ideeën en producten met hun punten en calorieën.</p>';
+    }
+    b.innerHTML = h;
+  };
+  draw();
+  sh.addEventListener('click', async e => {
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    const act = a.dataset.act;
+    if (act === 'sluit') closeSheet();
+    else if (act === 'tag') { st.tag = st.tag === a.dataset.tag ? null : a.dataset.tag; draw(); }
+    else if (act === 'kies') { const p = P(a.dataset.id); if (p) openPortie(p, ctx); }
+    else if (act === 'idee') {
+      const i = IDEEEN.find(x => x.id === a.dataset.id); if (!i) return;
+      for (const [pid, pi, q] of i.items) { const p = P(pid); if (p) await addEntry(makeEntry(p, p.porties[pi] ? pi : 0, q, ctx.moment, ctx.date)); }
+      toast(`${i.naam} toegevoegd als tussendoortje`); draw();
+    }
+  });
+}
+
+// ===== Beweging =====
+function openBeweging() {
+  const types = S.settings.activiteiten, date = S.day;
+  if (!types.length) { toast('Voeg eerst een activiteit toe bij Instellingen.'); return; }
+  const st = { tid: types[0].id, min: types[0].min, dup: false };
+  const sh = openSheet(`${sheetHead('Beweging', 'Elke beweging telt mee, niets moet. Bonuspunten gaan naar je weekreserve.')}<div class="sheet-body" data-slot="b"></div>`, { onClose: () => render() });
+  const b = $('[data-slot=b]', sh);
+  const type = () => types.find(x => x.id === st.tid) || types[0];
+  const punten = () => { const t = type(); return Math.floor(st.min / Math.max(1, t.min)) * t.punten; };
+  const draw = () => {
+    const t = type(), pts = punten();
+    b.innerHTML = `<h3 class="lbl">Wat heb je gedaan?</h3><div class="chips">${types.map(x => `<button class="chip chip-lg" data-act="type" data-id="${x.id}" aria-pressed="${x.id === t.id}"><span>${esc(x.naam)}</span><small>${x.min} min = +${x.punten}</small></button>`).join('')}</div>
+      <h3 class="lbl">Hoe lang?</h3>
+      <div class="qty"><button class="icon-btn icon-btn-soft" data-act="mmin" aria-label="5 minuten minder">−</button><output class="qty-v tnum">${st.min} min</output><button class="icon-btn icon-btn-soft" data-act="mplus" aria-label="5 minuten meer">+</button></div>
+      <div class="chips">${[15, 30, 45, 60, 90].map(m => `<button class="chip" data-act="min" data-m="${m}" aria-pressed="${m === st.min}">${m} min</button>`).join('')}</div>
+      <div class="result"><div class="result-pts"><span class="big tnum is-bonus">+${pts}</span><span class="big-label">voor je weekreserve</span></div></div>
+      ${pts === 0 ? `<p class="hint">${esc(t.naam)} telt per ${t.min} minuten.</p>` : ''}
+      ${st.dup ? `<div class="notice"><p>Je noteerde ${date === todayKey() ? 'vandaag' : 'op ' + fmtDate(date)} al ${st.min} minuten ${esc(t.naam.toLowerCase())}. Was dit een tweede keer?</p><div class="stack-h"><button class="btn btn-primary btn-sm" data-act="dup-ja">Ja, ook noteren</button><button class="btn btn-soft btn-sm" data-act="dup-nee">Nee</button></div></div>`
+        : `<button class="btn btn-primary btn-lg btn-block" data-act="noteer"${pts === 0 ? ' disabled' : ''}>Noteren${date !== todayKey() ? ` voor ${fmtShort(date)}` : ''}</button>`}`;
+  };
+  const save = async () => {
+    const t = type(), pts = punten();
+    const a = { id: uid('a'), date, type: t.id, naam: t.naam, minuten: st.min, punten: pts, ts: Date.now() };
+    S.activities.push(a); await bewaar('activities', a);
+    toast(`+${pts} in je weekreserve`); closeSheet();
+  };
+  draw();
+  sh.addEventListener('click', async e => {
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    switch (a.dataset.act) {
+      case 'sluit': closeSheet(); break;
+      case 'type': { st.tid = a.dataset.id; st.min = type().min; st.dup = false; draw(); break; }
+      case 'min': st.min = +a.dataset.m; st.dup = false; draw(); break;
+      case 'mmin': st.min = Math.max(5, st.min - 5); st.dup = false; draw(); break;
+      case 'mplus': st.min = Math.min(600, st.min + 5); st.dup = false; draw(); break;
+      case 'noteer': {
+        const t = type();
+        if (S.activities.some(x => x.date === date && x.type === t.id && x.minuten === st.min)) { st.dup = true; draw(); }
+        else await save();
+        break;
+      }
+      case 'dup-ja': await save(); break;
+      case 'dup-nee': st.dup = false; draw(); break;
+    }
+  });
+}
+async function delActiviteit(id) {
+  const a = S.activities.find(x => x.id === id); if (!a) return;
+  S.activities = S.activities.filter(x => x.id !== id); await verwijder('activities', id); render();
+  toast(`${a.naam} verwijderd`, { actie: 'Ongedaan maken', fn: async () => { S.activities.push(a); await bewaar('activities', a); render(); } });
+}
+
+// ===== Product bewerken =====
+function openProductEditor(p, opt = {}) {
+  const nieuw = !p;
+  const d = nieuw ? { id: uid('p'), naam: opt.naam || '', cat: 'Eigen producten', zero: false, regel: 'formule', eenheid: 'g', n: { kcal: '', eiwit: '', kh: '', vet: '', vezels: '' }, porties: [{ label: 'portie', g: 100 }], tags: [], fav: false, std: false, notitie: '' } : clone(p);
+  if (!d.porties || !d.porties.length) d.porties = [{ label: 'portie', g: 100 }];
+  const nv = [['kcal', 'kcal'], ['eiwit', 'eiwit (g)'], ['kh', 'koolhydraten (g)'], ['vet', 'vet (g)'], ['vezels', 'vezels (g)']];
+  const sh = openSheet(`${sheetHead(nieuw ? 'Nieuw product' : 'Product aanpassen', d.std ? 'Standaardproduct. Je aanpassingen blijven bewaard.' : '')}<div class="sheet-body">
+    <label class="field" for="pe-naam"><span>Naam</span><input id="pe-naam" value="${esc(d.naam)}" autocomplete="off"></label>
+    <label class="field" for="pe-cat"><span>Categorie</span><select id="pe-cat">${CATS.map(c => `<option${c === d.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+    <label class="switch-row" for="pe-zero"><span><b>ZeroPoints</b><small>Altijd 0 punten. De calorieën tellen wel mee.</small></span><input type="checkbox" class="switch" id="pe-zero"${d.zero ? ' checked' : ''}></label>
+    <div class="field"><span>Puntenregel</span><div class="seg" data-slot="regel"></div></div>
+    <fieldset class="fs"><legend>Voedingswaarden per 100 <span data-slot="eh">${eenheid(d)}</span></legend>
+      <div class="grid3">${nv.map(([k, l]) => `<label class="field" for="pe-n-${k}"><span>${l}</span><input id="pe-n-${k}" data-nv="${k}" inputmode="decimal" value="${esc(d.n[k])}"></label>`).join('')}
+      <label class="field" for="pe-eh"><span>eenheid</span><select id="pe-eh"><option value="g"${d.eenheid !== 'ml' ? ' selected' : ''}>gram</option><option value="ml"${d.eenheid === 'ml' ? ' selected' : ''}>ml</option></select></label></div>
+    </fieldset>
+    <fieldset class="fs"><legend>Porties</legend><div data-slot="porties"></div><button class="btn btn-soft btn-sm" data-act="por-nieuw">${ICON.plus}<span>Portie toevoegen</span></button></fieldset>
+    <fieldset class="fs"><legend>Past bij eetdrang</legend><div class="chips" data-slot="tags"></div></fieldset>
+    <p class="err" role="alert" data-slot="err"></p>
+    <div class="stack"><button class="btn btn-primary btn-lg" data-act="opslaan">Opslaan</button>${nieuw ? '' : '<button class="btn btn-ghost" data-act="verwijder">Product verwijderen</button>'}</div>
+  </div>`, { cls: 'sheet-tall' });
+  const regelSlot = $('[data-slot=regel]', sh), porSlot = $('[data-slot=porties]', sh), tagSlot = $('[data-slot=tags]', sh), err = $('[data-slot=err]', sh);
+  const lees = () => {
+    d.naam = $('#pe-naam', sh).value; d.cat = $('#pe-cat', sh).value; d.zero = $('#pe-zero', sh).checked; d.eenheid = $('#pe-eh', sh).value;
+    for (const [k] of nv) d.n[k] = $(`#pe-n-${k}`, sh).value;
+  };
+  const tmp = () => ({ ...d, n: Object.fromEntries(nv.map(([k]) => [k, num(d.n[k]) || 0])) });
+  const drawRegel = () => { regelSlot.innerHTML = [['formule', 'Formule'], ['vast', 'Vaste punten'], ['vet', 'Bereidingsvet']].map(([r, l]) => `<button data-act="regel" data-r="${r}" aria-pressed="${d.regel === r}">${l}</button>`).join(''); };
+  const derde = () => d.regel === 'vet' ? ['kl', 'kl'] : ['punten', 'punten'];
+  const drawPorties = () => {
+    const [veld, label] = derde();
+    porSlot.innerHTML = `<div class="por-head"><span>Omschrijving</span><span>${eenheid(d)}</span><span>${label}</span><span></span><span></span></div>` + d.porties.map((x, i) => `<div class="por-row"><input id="po-l-${i}" aria-label="Omschrijving" data-pf="label" data-i="${i}" value="${esc(x.label)}"><input id="po-g-${i}" aria-label="Hoeveelheid" inputmode="decimal" data-pf="g" data-i="${i}" value="${esc(x.g)}"><input id="po-x-${i}" aria-label="${label}" inputmode="decimal" data-pf="${veld}" data-i="${i}" value="${esc(x[veld] ?? '')}"><span class="pts tnum" data-pp="${i}"></span><button class="icon-btn" data-act="por-weg" data-i="${i}" aria-label="Portie verwijderen">${ICON.sluit}</button></div>`).join('') + `<p class="hint">${d.regel === 'vet' ? 'Kl = aantal koffielepels in deze portie.' : d.regel === 'vast' ? 'Vul per portie de vaste punten in.' : 'Laat punten leeg om de formule te gebruiken, of vul zelf een vaste waarde in.'}</p>`;
+    preview();
+  };
+  const preview = () => {
+    const t = tmp();
+    d.porties.forEach((x, i) => { const el = $(`[data-pp="${i}"]`, sh); if (el) el.textContent = portionPoints(t, { ...x, g: num(x.g) || 0 }); });
+    $('[data-slot=eh]', sh).textContent = eenheid(d);
+  };
+  const drawTags = () => { tagSlot.innerHTML = TAGS.map(([t, l]) => `<button class="chip" data-act="tag" data-tag="${t}" aria-pressed="${d.tags.includes(t)}">${l}</button>`).join(''); };
+  drawRegel(); drawPorties(); drawTags();
+  sh.addEventListener('input', e => {
+    const el = e.target;
+    if (el.dataset.pf) d.porties[+el.dataset.i][el.dataset.pf] = el.value;
+    lees(); preview();
+  });
+  sh.addEventListener('change', e => { if (e.target.id === 'pe-eh') { lees(); drawPorties(); } else { lees(); preview(); } });
+  sh.addEventListener('click', async e => {
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    switch (a.dataset.act) {
+      case 'sluit': closeSheet(); break;
+      case 'regel': lees(); d.regel = a.dataset.r; drawRegel(); drawPorties(); break;
+      case 'por-nieuw': lees(); d.porties.push(d.regel === 'vet' ? { label: `${d.porties.length + 1} koffielepels`, g: 4.5 * (d.porties.length + 1), kl: d.porties.length + 1 } : { label: 'portie', g: 100 }); drawPorties(); break;
+      case 'por-weg': lees(); if (d.porties.length > 1) { d.porties.splice(+a.dataset.i, 1); drawPorties(); } else err.textContent = 'Een product heeft minstens één portie nodig.'; break;
+      case 'tag': { const t = a.dataset.tag; d.tags = d.tags.includes(t) ? d.tags.filter(x => x !== t) : [...d.tags, t]; drawTags(); break; }
+      case 'opslaan': {
+        lees();
+        const naam = d.naam.trim();
+        if (!naam) { err.textContent = 'Geef het product een naam.'; return; }
+        const porties = [];
+        for (const x of d.porties) {
+          const g = num(x.g), label = String(x.label || '').trim() || 'portie';
+          if (!(g > 0)) { err.textContent = `Vul bij "${label}" een hoeveelheid groter dan 0 in.`; return; }
+          const po = { label, g };
+          if (d.regel === 'vet') po.kl = num(x.kl) > 0 ? num(x.kl) : 1;
+          else if (x.punten !== undefined && x.punten !== null && String(x.punten).trim() !== '') {
+            const pt = num(x.punten); if (!(pt >= 0)) { err.textContent = `De punten bij "${label}" zijn geen geldig getal.`; return; }
+            po.punten = pt;
+          } else if (d.regel === 'vast') { err.textContent = `Vul bij "${label}" de vaste punten in, of kies de formule.`; return; }
+          porties.push(po);
+        }
+        const nvals = {}; for (const [k] of nv) { const x = num(d.n[k]); nvals[k] = x >= 0 ? x : 0; }
+        const out = { id: d.id, naam, cat: d.cat, zero: d.zero, regel: d.regel, eenheid: d.eenheid, n: nvals, porties, tags: d.tags, fav: !!d.fav, std: !!d.std, notitie: d.notitie || '' };
+        if (nieuw) { S.products.push(out); await bewaar('products', out); }
+        else { Object.assign(p, out); await bewaar('products', p); }
+        toast(`${naam} bewaard`); closeSheet();
+        if (opt.onSaved) opt.onSaved(nieuw ? out : p);
+        if (S.view === 'producten') renderProdList();
+        break;
+      }
+      case 'verwijder': {
+        if (await vraag({ titel: 'Product verwijderen?', tekst: `"${p.naam}" verdwijnt uit je productenlijst. Wat je eerder noteerde, blijft in je dagboek staan.`, ok: 'Verwijderen', gevaar: true })) {
+          S.products = S.products.filter(x => x.id !== p.id);
+          if (p.std && !S.settings.verwijderdeStandaard.includes(p.id)) { S.settings.verwijderdeStandaard.push(p.id); await saveSettings(); }
+          await verwijder('products', p.id); toast(`${p.naam} verwijderd`); closeSheet(); render();
+        }
+        break;
+      }
+    }
+  });
+}
+
+// ===== Back-up =====
+function markBackup() { S.settings.lastBackup = todayKey(); saveSettings(); if (S.view !== 'producten') render(); }
+async function backupBestand() {
+  const json = JSON.stringify(backupObject()), naam = `mijn-voeding-backup-${todayKey()}.json`;
+  try {
+    const file = new File([json], naam, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Back-up Mijn Voeding' });
+      markBackup(); toast('Back-up bewaard'); return;
+    }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  try {
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    const a = document.createElement('a'); a.href = url; a.download = naam; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    markBackup(); toast('Back-upbestand gedownload');
+  } catch (e) { toast('Bewaren als bestand lukt hier niet. Kopieer de back-up als tekst.'); }
+}
+function backupTekst() {
+  const json = JSON.stringify(backupObject());
+  const fallback = () => {
+    const sh = openSheet(`${sheetHead('Back-up als tekst', 'Selecteer alles, kopieer en bewaar het in een notitie of mail aan jezelf.')}<div class="sheet-body"><textarea id="bk-tekst" class="mono" rows="8" readonly>${esc(json)}</textarea><button class="btn btn-primary btn-block" data-act="gedaan">Ik heb hem gekopieerd</button></div>`, { cls: 'sheet-small' });
+    const ta = $('#bk-tekst', sh); setTimeout(() => { try { ta.focus(); ta.select(); } catch (e) { } }, 250);
+    sh.addEventListener('click', e => { const a = e.target.closest('[data-act]'); if (!a) return; if (a.dataset.act === 'gedaan') { markBackup(); closeSheet(); } else if (a.dataset.act === 'sluit') closeSheet(); });
+  };
+  try {
+    navigator.clipboard.writeText(json).then(() => { markBackup(); toast('Back-up gekopieerd. Plak hem in een notitie of mail aan jezelf.'); }, fallback);
+  } catch (e) { fallback(); }
+}
+function openTerugzetten() {
+  const sh = openSheet(`${sheetHead('Back-up terugzetten', 'Kies een back-upbestand of plak de back-uptekst.')}<div class="sheet-body">
+    <label class="btn btn-soft btn-lg btn-block file-btn" for="imp-file">Bestand kiezen<input id="imp-file" class="vh" type="file" accept="application/json,.json,text/plain,.txt"></label>
+    <label class="field" for="imp-tekst"><span>Of plak de back-uptekst</span><textarea id="imp-tekst" class="mono" rows="4"></textarea></label>
+    <button class="btn btn-soft btn-block" data-act="tekst">Tekst terugzetten</button>
+    <p class="err" role="alert" data-slot="err"></p></div>`);
+  const err = $('[data-slot=err]', sh);
+  const verwerk = async text => {
+    err.textContent = '';
+    let o;
+    try { o = parseBackup(text); } catch (e) { err.textContent = e.message; return; }
+    const dt = o.gemaakt ? new Date(o.gemaakt) : null;
+    const wanneer = dt && !isNaN(dt) ? fmtDate(toKey(dt)) : 'onbekende datum';
+    const ok = await vraag({ titel: 'Back-up terugzetten?', tekst: `Dit vervangt alle gegevens op dit toestel door de back-up van ${wanneer}: ${(o.data.log || []).length} registraties en ${(o.data.products || []).length} producten.`, ok: 'Terugzetten', gevaar: true });
+    if (!ok) return;
+    try { await restoreBackup(o); closeAllSheets(); render(); toast('Back-up teruggezet'); }
+    catch (e) { console.error(e); err.textContent = 'Terugzetten mislukt. Je huidige gegevens zijn niet veranderd.'; }
+  };
+  $('#imp-file', sh).addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const r = new FileReader(); r.onload = () => verwerk(String(r.result)); r.onerror = () => { err.textContent = 'Het bestand kon niet gelezen worden.'; }; r.readAsText(f);
+  });
+  sh.addEventListener('click', e => {
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    if (a.dataset.act === 'sluit') closeSheet();
+    else if (a.dataset.act === 'tekst') { const t = $('#imp-tekst', sh).value.trim(); if (t) verwerk(t); else err.textContent = 'Plak eerst de back-uptekst.'; }
+  });
+}
+
+// ===== Gebeurtenissen in het hoofdscherm =====
+function bindApp() {
+  const root = app();
+  root.addEventListener('click', async e => {
+    const a = e.target.closest('[data-act], [data-tab]'); if (!a) return;
+    if (a.dataset.tab) {
+      if (a.dataset.tab === 'week' && S.view !== 'week') S.week = weekStartKey(S.day);
+      S.view = a.dataset.tab; render(); window.scrollTo(0, 0); return;
+    }
+    const s = S.settings;
+    switch (a.dataset.act) {
+      case 'dag': S.day = addDays(S.day, +a.dataset.d); render(); break;
+      case 'dag-vandaag': S.day = todayKey(); render(); break;
+      case 'toevoegen': openToevoegen(a.dataset.moment); break;
+      case 'eetdrang': openEetdrang(); break;
+      case 'beweging': openBeweging(); break;
+      case 'entry': openEntry(a.dataset.id); break;
+      case 'bewaar-maaltijd': openBewaarMaaltijd(a.dataset.moment); break;
+      case 'naar-budget': S.view = 'instellingen'; render(); { const el = $('#sec-voorstel'); if (el) el.scrollIntoView({ block: 'start' }); } break;
+      case 'backup-nu': if (BUILD === 'pwa') backupBestand(); else backupTekst(); break;
+      case 'test-weg': s.testMeldingWeg = true; saveSettings(); render(); break;
+      case 'week': S.week = addDays(S.week, 7 * (+a.dataset.d)); render(); break;
+      case 'week-nu': S.week = weekStartKey(todayKey()); render(); break;
+      case 'open-dag': S.day = a.dataset.k; S.view = 'vandaag'; render(); window.scrollTo(0, 0); break;
+      case 'act-del': await delActiviteit(a.dataset.id); break;
+      case 'prod-nieuw': openProductEditor(null, { onSaved: () => renderProdList() }); break;
+      case 'prod-open': { const p = P(a.dataset.id); if (p) openProductEditor(p, { onSaved: () => renderProdList() }); break; }
+      case 'prod-cat': S.prodCat = a.dataset.cat; for (const c of root.querySelectorAll('[data-act=prod-cat]')) c.setAttribute('aria-pressed', c.dataset.cat === S.prodCat); renderProdList(); break;
+      case 'geslacht': s.profiel.geslacht = a.dataset.v; saveSettings(); for (const c of root.querySelectorAll('[data-act=geslacht]')) c.setAttribute('aria-pressed', c.dataset.v === s.profiel.geslacht); updateVoorstel(); break;
+      case 'gebruik-gemeten': s.profiel.zeroKcal = +a.dataset.v; saveSettings(); { const el = $('#pr-zero'); if (el) el.value = s.profiel.zeroKcal; } updateVoorstel(); break;
+      case 'voorstel-gebruik': s.dagBudget = +a.dataset.dag; s.weekReserve = +a.dataset.week; s.budgetIngesteld = true; await saveSettings(); { const d = $('#set-dag'), w = $('#set-week'); if (d) d.value = s.dagBudget; if (w) w.value = s.weekReserve; } toast(`Budget ingesteld: ${s.dagBudget} per dag en ${s.weekReserve} weekreserve`); break;
+      case 'formule-standaard': s.formule = clone(DEFAULTS.formule); s.vetPerKl = DEFAULTS.vetPerKl; await saveSettings(); render(); toast('Standaardformule teruggezet'); break;
+      case 'at-nieuw': s.activiteiten.push({ id: uid('t'), naam: 'Nieuwe activiteit', min: 15, punten: 1 }); await saveSettings(); render(); break;
+      case 'at-weg': { const i = +a.dataset.i; if (s.activiteiten.length <= 1) { toast('Hou minstens één activiteit over.'); break; } s.activiteiten.splice(i, 1); await saveSettings(); render(); break; }
+      case 'backup-bestand': backupBestand(); break;
+      case 'backup-tekst': backupTekst(); break;
+      case 'backup-terug': openTerugzetten(); break;
+    }
+  });
+  root.addEventListener('input', e => {
+    const el = e.target;
+    if (el.id === 'prod-zoek') { S.prodQ = el.value; renderProdList(); }
+    else if (el.dataset.prof && el.tagName !== 'SELECT') { S.settings.profiel[el.dataset.prof] = el.value.trim(); updateVoorstel(); }
+  });
+  root.addEventListener('change', e => {
+    const el = e.target, s = S.settings;
+    if (el.dataset.set) {
+      const k = el.dataset.set;
+      if (el.type === 'checkbox') s[k] = el.checked;
+      else {
+        const v = num(el.value);
+        if (!(v >= 0)) { toast('Vul een geldig getal in.'); el.value = s[k]; return; }
+        s[k] = Math.round(v);
+        if (k === 'dagBudget' || k === 'weekReserve') s.budgetIngesteld = true;
+        el.value = s[k];
+      }
+      saveSettings(); updateVoorstel();
+    } else if (el.dataset.prof) {
+      s.profiel[el.dataset.prof] = el.tagName === 'SELECT' ? num(el.value) : el.value.trim();
+      saveSettings(); updateVoorstel();
+    } else if (el.dataset.form) {
+      const v = num(el.value);
+      if (!(v >= 1)) { toast('Gebruik een getal van minstens 1.'); el.value = s.formule[el.dataset.form]; return; }
+      s.formule[el.dataset.form] = v; saveSettings(); updateFormuleTekst(); updateVoorstel();
+    } else if (el.dataset.acti !== undefined) {
+      const at = s.activiteiten[+el.dataset.acti], f = el.dataset.f; if (!at) return;
+      if (f === 'naam') at.naam = el.value.trim() || at.naam;
+      else { const v = Math.round(num(el.value)); if (!(v >= (f === 'min' ? 1 : 0))) { toast('Vul een geldig getal in.'); el.value = at[f]; return; } at[f] = v; }
+      saveSettings();
+    }
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const t = todayKey();
+    if (S._lastToday && S._lastToday !== t) { if (S.day === S._lastToday) S.day = t; S._lastToday = t; if (!sheets.length) render(); }
+  });
+}
+
+// ===== Start =====
+async function start() {
+  try { await Store.open(); S.storageOK = true; }
+  catch (e) { console.warn('Opslag niet beschikbaar', e); Store.useMemory(); S.storageOK = false; }
+  try { await loadAll(); } catch (e) { console.error(e); }
+  S._lastToday = todayKey();
+  bindApp();
+  render();
+  try {
+    if (S.storageOK && navigator.storage && navigator.storage.persist) {
+      S.persistent = (await navigator.storage.persisted()) || (await navigator.storage.persist());
+    }
+  } catch (e) { }
+  if (BUILD === 'pwa' && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
+}
+start();
+
+</script>
+</body>
+</html>
